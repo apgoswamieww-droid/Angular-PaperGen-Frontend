@@ -1,0 +1,14 @@
+<section class="placeholder">
+  <span class="placeholder__icon" aria-hidden="true">
+    <app-icon [name]="icon()" />
+  </span>
+  <h1>{{ title() }}</h1>
+  <p>{{ description() }}</p>
+  <div class="placeholder__actions">
+    <a class="placeholder__back" [routerLink]="backLink()">
+      <app-icon name="arrow-right" />
+      Back to dashboard
+    </a>
+    <span class="placeholder__badge">In design &middot; coming soon</span>
+  </div>
+</section>

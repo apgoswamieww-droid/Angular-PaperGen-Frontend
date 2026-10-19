@@ -1,1 +1,48 @@
-/* You can add global styles to this file, and also import other style files */
+:root {
+  color-scheme: light;
+
+  --pg-ink: #101828;
+  --pg-ink-muted: #667085;
+  --pg-border: #e4e7ec;
+  --pg-surface: #ffffff;
+  --pg-canvas: #f6f7fb;
+  --pg-primary: #73113a;
+  --pg-primary-strong: #5c0d2e;
+  --pg-primary-deep: #460a23;
+  --pg-primary-soft: #fbeef4;
+  --pg-primary-ring: rgb(115 17 58 / 0.14);
+  --pg-primary-shadow: rgb(115 17 58 / 0.55);
+  --pg-accent: var(--pg-primary);
+  --pg-accent-strong: var(--pg-primary-strong);
+  --pg-danger: #b42318;
+  --pg-danger-bg: #fef3f2;
+  --pg-success: #067647;
+  --pg-success-bg: #ecfdf3;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family:
+    'Inter',
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  line-height: 1.5;
+  color: var(--pg-ink);
+  background-color: var(--pg-canvas);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}

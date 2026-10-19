@@ -1,0 +1,65 @@
+<section class="page">
+  <header class="page__head">
+    <div>
+      <h1>Branding studio</h1>
+      <p>
+        Pick a school to review its branding, or open the editor to change colours and the logo.
+      </p>
+    </div>
+  </header>
+
+  @if (loading()) {
+    <section class="card">
+      <div class="state" role="status">
+        <span class="spinner" aria-hidden="true"></span>
+        <p>Loading schools&hellip;</p>
+      </div>
+    </section>
+  } @else if (error(); as error) {
+    <section class="card">
+      <div class="state state--error" role="alert">
+        <app-icon name="alert-circle" />
+        <p>{{ error }}</p>
+        <button type="button" class="btn-ghost" (click)="load()">Try again</button>
+      </div>
+    </section>
+  } @else if (schools().length > 0) {
+    <section class="picker" data-testid="brand-picker">
+      @for (school of schools(); track school.id) {
+        <article class="card school-card">
+          <div class="school-card__brand">
+            <span class="school-card__initials" [style.background]="school.brandColor">{{
+              initials(school)
+            }}</span>
+            <div class="school-card__meta">
+              <h2>{{ school.name }}</h2>
+              <p>
+                {{ typeLabel(school.type) }}
+                @if (school.city) {
+                  &middot; {{ school.city }}
+                }
+              </p>
+              <code class="school-card__domain">{{ school.slug }}.papergen.app</code>
+            </div>
+          </div>
+          <div class="school-card__actions">
+            @if (canManage()) {
+              <a class="btn-primary" [routerLink]="['/admin/schools', school.id, 'edit']">
+                <app-icon name="palette" />
+                Edit branding
+              </a>
+            }
+            <a class="btn-ghost" [routerLink]="['/admin/schools', school.id]">View school</a>
+          </div>
+        </article>
+      }
+    </section>
+  } @else {
+    <section class="card">
+      <div class="state" role="status">
+        <app-icon name="building" />
+        <p>No schools yet. Register a school to set up its branding.</p>
+      </div>
+    </section>
+  }
+</section>

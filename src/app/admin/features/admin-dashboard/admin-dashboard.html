@@ -1,0 +1,147 @@
+<section class="page">
+  <header class="page__head">
+    <div>
+      <h1>Platform overview</h1>
+      <p>Tenants, usage and platform health across every school on Paper Generator.</p>
+    </div>
+    <a class="btn-primary" routerLink="/admin/schools">
+      <app-icon name="building" />
+      Manage schools
+    </a>
+  </header>
+
+  <div class="stats">
+    @for (stat of stats(); track stat.label) {
+      <article class="stat-card">
+        <span class="stat-card__icon"><app-icon [name]="stat.icon" /></span>
+        <p class="stat-card__label">{{ stat.label }}</p>
+        <p class="stat-card__value">{{ stat.value }}</p>
+        <p class="stat-card__delta">{{ stat.delta }}</p>
+      </article>
+    }
+  </div>
+
+  @if (dataError(); as dataError) {
+    <p class="alert" role="alert" data-testid="data-error">
+      <app-icon name="alert-circle" />
+      {{ dataError }}
+      <button type="button" class="btn-ghost" (click)="load()">Try again</button>
+    </p>
+  }
+
+  <div class="columns">
+    <section class="card">
+      <header class="card__head">
+        <h2>Recent tenants</h2>
+        <a class="card__link" routerLink="/admin/schools">
+          View all
+          <app-icon name="arrow-right" />
+        </a>
+      </header>
+
+      @if (dataLoading()) {
+        <div class="state" role="status">
+          <span class="spinner" aria-hidden="true"></span>
+          <p>Loading tenants&hellip;</p>
+        </div>
+      } @else if (tenants().length === 0) {
+        <div class="state" role="status">
+          <p>No schools yet.</p>
+        </div>
+      } @else {
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>School</th>
+                <th>Plan</th>
+                <th>Users</th>
+                <th>Status</th>
+                <th>Renewal</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (tenant of tenants(); track tenant.id) {
+                <tr>
+                  <td>
+                    <span class="name-cell">{{ tenant.name }}</span>
+                  </td>
+                  <td>{{ tenant.planName }}</td>
+                  <td>{{ countLabel(tenant.userCount) }}</td>
+                  <td>
+                    <span [class]="'pill pill--' + tenant.subscriptionStatus">{{
+                      subscriptionLabel(tenant.subscriptionStatus)
+                    }}</span>
+                  </td>
+                  <td>{{ dateLabel(tenant.renewalAt) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+
+    <div class="columns__side">
+      <section class="card">
+        <header class="card__head">
+          <h2>Platform status</h2>
+          <span [class]="'pill pill--' + status()" data-testid="api-status">{{ status() }}</span>
+        </header>
+
+        @if (error(); as message) {
+          <p class="status-error" data-testid="api-error">{{ message }}</p>
+        }
+
+        <ul class="status-list">
+          <li>
+            <span class="status-list__icon"><app-icon name="server" /></span>
+            <span class="status-list__label">API</span>
+            <span class="status-list__value">{{ apiState() }}</span>
+          </li>
+          <li>
+            <span class="status-list__icon"><app-icon name="database" /></span>
+            <span class="status-list__label">Database</span>
+            <span class="status-list__value">
+              @if (health(); as current) {
+                {{ current.database === 'up' ? 'Connected' : 'Down' }}
+              } @else {
+                —
+              }
+            </span>
+          </li>
+          <li>
+            <span class="status-list__icon"><app-icon name="clock" /></span>
+            <span class="status-list__label">Uptime</span>
+            <span class="status-list__value">{{ uptime() }}</span>
+          </li>
+        </ul>
+
+        <button type="button" class="btn-ghost" data-testid="recheck" (click)="refresh()">
+          <app-icon name="rotate-cw" />
+          Re-check
+        </button>
+      </section>
+
+      <section class="card">
+        <header class="card__head">
+          <h2>Quick actions</h2>
+        </header>
+        <div class="quick">
+          <a class="quick__item" routerLink="/admin/schools">
+            <app-icon name="building" />
+            <span>Invite a school</span>
+          </a>
+          <a class="quick__item" routerLink="/admin/white-label">
+            <app-icon name="palette" />
+            <span>Brand a workspace</span>
+          </a>
+          <a class="quick__item" routerLink="/admin/plans">
+            <app-icon name="credit-card" />
+            <span>Review plans</span>
+          </a>
+        </div>
+      </section>
+    </div>
+  </div>
+</section>

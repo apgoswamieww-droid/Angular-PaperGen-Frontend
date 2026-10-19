@@ -1,0 +1,168 @@
+<section class="page">
+  <nav class="crumbs">
+    <a routerLink="/users">
+      <app-icon name="arrow-right" class="crumbs__arrow" />
+      Back to users
+    </a>
+  </nav>
+
+  @if (loading()) {
+    <section class="card">
+      <div class="state" role="status">
+        <span class="spinner" aria-hidden="true"></span>
+        <p>Loading user&hellip;</p>
+      </div>
+    </section>
+  } @else if (loadError(); as loadError) {
+    <section class="card">
+      <div class="state state--error" role="alert">
+        <app-icon name="alert-circle" />
+        <p>{{ loadError }}</p>
+        <button type="button" class="btn-ghost" (click)="load()">Try again</button>
+      </div>
+    </section>
+  } @else if (credentials(); as credentials) {
+    <header class="page__head">
+      <div>
+        <h1>User created</h1>
+        <p>Share these credentials with the new user — the password is shown only once.</p>
+      </div>
+    </header>
+
+    <section class="card credentials" data-testid="credentials-panel">
+      <p
+        class="credentials__status"
+        [class.credentials__status--warn]="!credentials.sent"
+        role="status"
+      >
+        <app-icon [name]="credentials.sent ? 'check' : 'alert-circle'" />
+        @if (credentials.sent) {
+          Credentials were emailed to <strong>{{ credentials.email }}</strong
+          >.
+        } @else {
+          Email delivery failed. Share these credentials with
+          <strong>{{ credentials.email }}</strong> yourself.
+        }
+      </p>
+
+      <dl class="credentials__list">
+        <div class="credentials__row">
+          <dt>Email</dt>
+          <dd data-testid="credentials-email">{{ credentials.email }}</dd>
+        </div>
+        <div class="credentials__row">
+          <dt>Password</dt>
+          <dd>
+            <code data-testid="credentials-password">{{ credentials.password }}</code>
+            <button type="button" class="btn-ghost" (click)="copyPassword()">
+              {{ copied() ? 'Copied' : 'Copy' }}
+            </button>
+          </dd>
+        </div>
+      </dl>
+
+      <div class="credentials__actions">
+        <a class="btn-primary" routerLink="/users" [queryParams]="{ saved: '1' }"> Done </a>
+      </div>
+    </section>
+  } @else {
+    <header class="page__head">
+      <div>
+        <h1>{{ editing ? 'Edit user' : 'Add user' }}</h1>
+        <p>
+          @if (editing) {
+            Update this person&rsquo;s details or role. Changes apply immediately.
+          } @else {
+            Create a login for a teacher, staff member or student. We email them a generated
+            password.
+          }
+        </p>
+      </div>
+    </header>
+
+    <form class="card form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      @if (formError(); as formError) {
+        <p class="alert" role="alert" data-testid="form-error">
+          <app-icon name="alert-circle" />
+          {{ formError }}
+        </p>
+      }
+
+      <fieldset class="form__section">
+        <legend>Profile</legend>
+
+        <label class="field">
+          <span class="field__label">Full name</span>
+          <input
+            class="field__input"
+            [class.is-invalid]="errorFor('name') !== null"
+            type="text"
+            formControlName="name"
+            autocomplete="name"
+            data-testid="name-input"
+          />
+          @if (errorFor('name'); as message) {
+            <span class="field__error">{{ message }}</span>
+          }
+        </label>
+
+        <label class="field">
+          <span class="field__label">Email address</span>
+          <input
+            class="field__input"
+            [class.is-invalid]="errorFor('email') !== null || emailServerError() !== null"
+            type="email"
+            formControlName="email"
+            autocomplete="email"
+            data-testid="email-input"
+          />
+          @if (emailServerError(); as message) {
+            <span class="field__error">{{ message }}</span>
+          } @else if (errorFor('email'); as message) {
+            <span class="field__error">{{ message }}</span>
+          }
+        </label>
+
+        <div class="form__row">
+          <label class="field">
+            <span class="field__label">Phone <span class="field__hint">(optional)</span></span>
+            <input
+              class="field__input"
+              [class.is-invalid]="errorFor('phone') !== null"
+              type="tel"
+              formControlName="phone"
+              autocomplete="tel"
+              data-testid="phone-input"
+            />
+            @if (errorFor('phone'); as message) {
+              <span class="field__error">{{ message }}</span>
+            }
+          </label>
+
+          <label class="field">
+            <span class="field__label">Role</span>
+            <select class="field__input" formControlName="role" data-testid="role-input">
+              @for (option of roleOptions; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select>
+            @if (roleLocked()) {
+              <span class="field__hint">You cannot change your own role.</span>
+            }
+          </label>
+        </div>
+      </fieldset>
+
+      <div class="form__actions">
+        <a class="btn-ghost" routerLink="/users">Cancel</a>
+        <button type="submit" class="btn-primary" [disabled]="submitting()" data-testid="submit">
+          @if (submitting()) {
+            Saving&hellip;
+          } @else {
+            {{ editing ? 'Save changes' : 'Create user' }}
+          }
+        </button>
+      </div>
+    </form>
+  }
+</section>

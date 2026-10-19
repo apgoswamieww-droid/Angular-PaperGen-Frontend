@@ -1,0 +1,437 @@
+<section class="page">
+  <nav class="crumbs">
+    <a [routerLink]="['/admin/schools', id]">
+      <app-icon name="arrow-right" class="crumbs__arrow" />
+      Back to school
+    </a>
+  </nav>
+
+  @if (!canManage()) {
+    <section class="card notice" role="alert">
+      <app-icon name="shield" />
+      <div>
+        <h1>Not available</h1>
+        <p>Only super admins can edit school configuration.</p>
+      </div>
+    </section>
+  } @else if (loading()) {
+    <section class="card">
+      <div class="state" role="status">
+        <span class="spinner" aria-hidden="true"></span>
+        <p>Loading configuration&hellip;</p>
+      </div>
+    </section>
+  } @else if (loadError(); as loadError) {
+    <section class="card">
+      <div class="state state--error" role="alert">
+        <app-icon name="alert-circle" />
+        <p>{{ loadError }}</p>
+        <button type="button" class="btn-ghost" (click)="load()">Try again</button>
+      </div>
+    </section>
+  } @else {
+    <header class="page__head">
+      <div>
+        <h1>Edit school configuration</h1>
+        <p>Contact details, address, academics and branding for this workspace.</p>
+      </div>
+    </header>
+
+    <form class="card form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      @if (formError(); as formError) {
+        <p class="alert" role="alert">
+          <app-icon name="alert-circle" />
+          {{ formError }}
+        </p>
+      }
+
+      <fieldset class="form__section">
+        <legend>Basic details</legend>
+
+        <label class="field">
+          <span class="field__label">School name</span>
+          <input
+            class="field__input"
+            [class.is-invalid]="errorFor('name') !== null"
+            type="text"
+            formControlName="name"
+            autocomplete="organization"
+          />
+          @if (errorFor('name'); as message) {
+            <span class="field__error">{{ message }}</span>
+          }
+        </label>
+
+        <label class="field">
+          <span class="field__label">Login domain</span>
+          <span class="field__suffix">
+            <input
+              class="field__input"
+              [class.is-invalid]="errorFor('slug') !== null || slugServerError() !== null"
+              type="text"
+              formControlName="slug"
+              autocomplete="off"
+            />
+            <span class="field__suffix-text">.papergen.app</span>
+          </span>
+          @if (slugServerError(); as message) {
+            <span class="field__error">{{ message }}</span>
+          } @else if (errorFor('slug'); as message) {
+            <span class="field__error">{{ message }}</span>
+          }
+        </label>
+
+        <div class="form__row">
+          <label class="field">
+            <span class="field__label">Type</span>
+            <select class="field__input" formControlName="type">
+              @for (option of types; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="field">
+            <span class="field__label">Plan</span>
+            <select
+              class="field__input"
+              [class.is-invalid]="errorFor('plan') !== null"
+              formControlName="plan"
+            >
+              @for (option of planOptions(); track option.code) {
+                <option [value]="option.code">{{ option.name }}</option>
+              }
+            </select>
+            @if (errorFor('plan'); as message) {
+              <span class="field__error">{{ message }}</span>
+            }
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset class="form__section">
+        <legend>Contact</legend>
+
+        <div class="form__row">
+          <label class="field">
+            <span class="field__label"
+              >School email <span class="field__hint">(optional)</span></span
+            >
+            <input
+              class="field__input"
+              [class.is-invalid]="errorFor('email') !== null"
+              type="email"
+              formControlName="email"
+              autocomplete="email"
+            />
+            @if (errorFor('email'); as message) {
+              <span class="field__error">{{ message }}</span>
+            }
+          </label>
+
+          <label class="field">
+            <span class="field__label">Phone <span class="field__hint">(optional)</span></span>
+            <input
+              class="field__input"
+              [class.is-invalid]="errorFor('phone') !== null"
+              type="tel"
+              formControlName="phone"
+              autocomplete="tel"
+            />
+            @if (errorFor('phone'); as message) {
+              <span class="field__error">{{ message }}</span>
+            }
+          </label>
+        </div>
+
+        <label class="field">
+          <span class="field__label">Website <span class="field__hint">(optional)</span></span>
+          <input
+            class="field__input"
+            [class.is-invalid]="errorFor('website') !== null"
+            type="url"
+            formControlName="website"
+            placeholder="https://school.edu"
+            autocomplete="url"
+          />
+          @if (errorFor('website'); as message) {
+            <span class="field__error">{{ message }}</span>
+          }
+        </label>
+      </fieldset>
+
+      <fieldset class="form__section">
+        <legend>Address</legend>
+
+        <div class="form__row">
+          <label class="field">
+            <span class="field__label"
+              >Address line 1 <span class="field__hint">(optional)</span></span
+            >
+            <input
+              class="field__input"
+              [class.is-invalid]="errorFor('addressLine1') !== null"
+              type="text"
+              formControlName="addressLine1"
+              autocomplete="address-line1"
+            />
+            @if (errorFor('addressLine1'); as message) {
+              <span class="field__error">{{ message }}</span>
+            }
+          </label>
+
+          <label class="field">
+            <span class="field__label"
+              >Address line 2 <span class="field__hint">(optional)</span></span
+            >
+            <input
+              class="field__input"
+              [class.is-invalid]="errorFor('addressLine2') !== null"
+              type="text"
+              formControlName="addressLine2"
+              autocomplete="address-line2"
+            />
+            @if (errorFor('addressLine2'); as message) {
+              <span class="field__error">{{ message }}</span>
+            }
+          </label>
+        </div>
+
+        <div class="form__row">
+          <label class="field">
+            <span class="field__label">City <span class="field__hint">(optional)</span></span>
+            <input
+              class="field__input"
+              [class.is-invalid]="errorFor('city') !== null"
+              type="text"
+              formControlName="city"
+              autocomplete="address-level2"
+            />
+            @if (errorFor('city'); as message) {
+              <span class="field__error">{{ message }}</span>
+            }
+          </label>
+
+          <label class="field">
+            <span class="field__label">State <span class="field__hint">(optional)</span></span>
+            <input
+              class="field__input"
+              [class.is-invalid]="errorFor('state') !== null"
+              type="text"
+              formControlName="state"
+              autocomplete="address-level1"
+            />
+            @if (errorFor('state'); as message) {
+              <span class="field__error">{{ message }}</span>
+            }
+          </label>
+        </div>
+
+        <div class="form__row">
+          <label class="field">
+            <span class="field__label">Pincode <span class="field__hint">(optional)</span></span>
+            <input
+              class="field__input"
+              [class.is-invalid]="errorFor('pincode') !== null"
+              type="text"
+              formControlName="pincode"
+              autocomplete="postal-code"
+            />
+            @if (errorFor('pincode'); as message) {
+              <span class="field__error">{{ message }}</span>
+            }
+          </label>
+
+          <label class="field">
+            <span class="field__label">Country <span class="field__hint">(optional)</span></span>
+            <input
+              class="field__input"
+              [class.is-invalid]="errorFor('country') !== null"
+              type="text"
+              formControlName="country"
+              autocomplete="country-name"
+            />
+            @if (errorFor('country'); as message) {
+              <span class="field__error">{{ message }}</span>
+            }
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset class="form__section">
+        <legend>Academic</legend>
+
+        <div class="form__row">
+          <label class="field">
+            <span class="field__label">Board</span>
+            <select class="field__input" formControlName="board">
+              @for (option of boards; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="field">
+            <span class="field__label"
+              >Affiliation no. <span class="field__hint">(optional)</span></span
+            >
+            <input
+              class="field__input"
+              [class.is-invalid]="errorFor('affiliationNumber') !== null"
+              type="text"
+              formControlName="affiliationNumber"
+            />
+            @if (errorFor('affiliationNumber'); as message) {
+              <span class="field__error">{{ message }}</span>
+            }
+          </label>
+        </div>
+
+        <div class="form__row">
+          <label class="field">
+            <span class="field__label">Principal <span class="field__hint">(optional)</span></span>
+            <input
+              class="field__input"
+              [class.is-invalid]="errorFor('principalName') !== null"
+              type="text"
+              formControlName="principalName"
+            />
+            @if (errorFor('principalName'); as message) {
+              <span class="field__error">{{ message }}</span>
+            }
+          </label>
+
+          <label class="field">
+            <span class="field__label"
+              >Academic year <span class="field__hint">(optional)</span></span
+            >
+            <input
+              class="field__input"
+              [class.is-invalid]="errorFor('academicYear') !== null"
+              type="text"
+              formControlName="academicYear"
+              placeholder="e.g. 2025-26"
+            />
+            @if (errorFor('academicYear'); as message) {
+              <span class="field__error">{{ message }}</span>
+            }
+          </label>
+        </div>
+
+        <label class="field">
+          <span class="field__label">Timezone</span>
+          <select class="field__input" formControlName="timezone">
+            @for (zone of timezones(); track zone) {
+              <option [value]="zone">{{ zone }}</option>
+            }
+          </select>
+        </label>
+      </fieldset>
+
+      <fieldset class="form__section">
+        <legend>Branding</legend>
+
+        <label class="field">
+          <span class="field__label">Tagline <span class="field__hint">(optional)</span></span>
+          <input
+            class="field__input"
+            [class.is-invalid]="errorFor('tagline') !== null"
+            type="text"
+            formControlName="tagline"
+            placeholder="e.g. Excellence in every classroom."
+          />
+          @if (errorFor('tagline'); as message) {
+            <span class="field__error">{{ message }}</span>
+          }
+        </label>
+
+        <div class="field">
+          <span class="field__label" id="brand-colour-label">Brand colour</span>
+          <div class="swatches" role="group" aria-labelledby="brand-colour-label">
+            @for (preset of presets; track preset.color) {
+              <button
+                type="button"
+                class="swatch"
+                [class.is-active]="form.controls.brandColor.value === preset.color"
+                [style.background]="preset.color"
+                [attr.data-color]="preset.color"
+                [attr.aria-label]="preset.name"
+                [attr.aria-pressed]="form.controls.brandColor.value === preset.color"
+                (click)="applyPreset(preset.color)"
+              ></button>
+            }
+          </div>
+          <div class="color-row">
+            <input
+              class="color-input"
+              type="color"
+              formControlName="brandColor"
+              aria-label="Custom brand colour"
+            />
+            <code class="color-hex">{{ form.controls.brandColor.value }}</code>
+          </div>
+        </div>
+
+        <div class="field">
+          <span class="field__label">School logo</span>
+          <div class="logo-widget">
+            @if (logo()) {
+              <img
+                class="logo-preview"
+                [src]="logo()"
+                alt="Logo preview"
+                data-testid="logo-preview"
+              />
+            } @else {
+              <span class="logo-placeholder">
+                <app-icon name="building" />
+              </span>
+            }
+            <div class="logo-widget__actions">
+              <label class="btn-ghost logo-upload">
+                <app-icon name="plus" />
+                {{ logo() ? 'Replace logo' : 'Upload logo' }}
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                  data-testid="logo-input"
+                  hidden
+                  (change)="onLogoSelected($event)"
+                />
+              </label>
+              @if (logo()) {
+                <button
+                  type="button"
+                  class="btn-ghost"
+                  data-action="remove-logo"
+                  (click)="removeLogo()"
+                >
+                  Remove
+                </button>
+              }
+            </div>
+          </div>
+          <span class="field__hint"
+            >PNG, JPEG, WebP or SVG, up to 2 MB. Stored with the school record.</span
+          >
+          @if (logoError(); as message) {
+            <span class="field__error">{{ message }}</span>
+          }
+        </div>
+      </fieldset>
+
+      <div class="form__actions">
+        <button type="submit" class="btn-primary" [disabled]="submitting()">
+          @if (submitting()) {
+            <span class="spinner" aria-hidden="true"></span>
+            Saving&hellip;
+          } @else {
+            <app-icon name="check" />
+            Save changes
+          }
+        </button>
+        <a class="btn-ghost" [routerLink]="['/admin/schools', id]">Cancel</a>
+      </div>
+    </form>
+  }
+</section>

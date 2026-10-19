@@ -1,0 +1,258 @@
+<section class="page">
+  <nav class="crumbs">
+    <a routerLink="/admin/plans">
+      <app-icon name="arrow-right" class="crumbs__arrow" />
+      Back to plans
+    </a>
+  </nav>
+
+  @if (!canManage()) {
+    <section class="card notice" role="alert">
+      <app-icon name="shield" />
+      <div>
+        <h1>Not available</h1>
+        <p>Only super admins can manage plans.</p>
+      </div>
+    </section>
+  } @else if (loading()) {
+    <section class="card">
+      <div class="state" role="status">
+        <span class="spinner" aria-hidden="true"></span>
+        <p>Loading plan&hellip;</p>
+      </div>
+    </section>
+  } @else if (loadError(); as loadError) {
+    <section class="card">
+      <div class="state state--error" role="alert">
+        <app-icon name="alert-circle" />
+        <p>{{ loadError }}</p>
+        <button type="button" class="btn-ghost" (click)="load()">Try again</button>
+      </div>
+    </section>
+  } @else {
+    <header class="page__head">
+      <div>
+        <h1>{{ editing ? 'Edit plan' : 'New plan' }}</h1>
+        <p>
+          @if (editing) {
+            Pricing, limits and features shown on this pricing card.
+          } @else {
+            Define a pricing card schools can be subscribed to.
+          }
+        </p>
+      </div>
+    </header>
+
+    <form class="card form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      @if (formError(); as formError) {
+        <p class="alert" role="alert" data-testid="form-error">
+          <app-icon name="alert-circle" />
+          {{ formError }}
+        </p>
+      }
+
+      <fieldset class="form__section">
+        <legend>Basics</legend>
+
+        <label class="field">
+          <span class="field__label">Plan name</span>
+          <input
+            class="field__input"
+            [class.is-invalid]="errorFor('name') !== null"
+            type="text"
+            formControlName="name"
+            placeholder="e.g. Growth"
+            autocomplete="off"
+          />
+          @if (errorFor('name'); as message) {
+            <span class="field__error">{{ message }}</span>
+          }
+        </label>
+
+        <label class="field">
+          <span class="field__label">Tagline <span class="field__hint">(optional)</span></span>
+          <input
+            class="field__input"
+            [class.is-invalid]="errorFor('tagline') !== null"
+            type="text"
+            formControlName="tagline"
+            placeholder="e.g. For growing schools."
+          />
+          @if (errorFor('tagline'); as message) {
+            <span class="field__error">{{ message }}</span>
+          }
+        </label>
+      </fieldset>
+
+      <fieldset class="form__section">
+        <legend>Pricing</legend>
+
+        <label class="check">
+          <input type="checkbox" formControlName="customPrice" data-testid="custom-price" />
+          <span>
+            Custom pricing
+            <span class="field__hint">(no fixed price is shown on the card)</span>
+          </span>
+        </label>
+
+        <div class="form__row">
+          <label class="field">
+            <span class="field__label">Monthly price</span>
+            <div class="field__suffix">
+              <input
+                class="field__input"
+                [class.is-invalid]="errorFor('monthlyPrice') !== null"
+                type="number"
+                min="0"
+                step="1"
+                formControlName="monthlyPrice"
+                placeholder="e.g. 8999"
+              />
+              <span class="field__suffix-text">&#8377; / month</span>
+            </div>
+            @if (errorFor('monthlyPrice'); as message) {
+              <span class="field__error">{{ message }}</span>
+            }
+          </label>
+
+          <label class="field">
+            <span class="field__label">Annual price</span>
+            <div class="field__suffix">
+              <input
+                class="field__input"
+                [class.is-invalid]="errorFor('annualPrice') !== null"
+                type="number"
+                min="0"
+                step="1"
+                formControlName="annualPrice"
+                placeholder="e.g. 89990"
+              />
+              <span class="field__suffix-text">&#8377; / year</span>
+            </div>
+            @if (errorFor('annualPrice'); as message) {
+              <span class="field__error">{{ message }}</span>
+            }
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset class="form__section">
+        <legend>Usage limits</legend>
+
+        <div class="form__row">
+          <label class="field">
+            <span class="field__label">Max students</span>
+            <input
+              class="field__input"
+              [class.is-invalid]="errorFor('maxStudents') !== null"
+              type="number"
+              min="0"
+              step="1"
+              formControlName="maxStudents"
+              placeholder="Empty = unlimited"
+            />
+            @if (errorFor('maxStudents'); as message) {
+              <span class="field__error">{{ message }}</span>
+            }
+          </label>
+
+          <label class="field">
+            <span class="field__label">Max teachers</span>
+            <input
+              class="field__input"
+              [class.is-invalid]="errorFor('maxTeachers') !== null"
+              type="number"
+              min="0"
+              step="1"
+              formControlName="maxTeachers"
+              placeholder="Empty = unlimited"
+            />
+            @if (errorFor('maxTeachers'); as message) {
+              <span class="field__error">{{ message }}</span>
+            }
+          </label>
+        </div>
+
+        <label class="field">
+          <span class="field__label">Max total users</span>
+          <input
+            class="field__input"
+            [class.is-invalid]="errorFor('maxTotalUsers') !== null"
+            type="number"
+            min="0"
+            step="1"
+            formControlName="maxTotalUsers"
+            placeholder="Empty = unlimited"
+          />
+          @if (errorFor('maxTotalUsers'); as message) {
+            <span class="field__error">{{ message }}</span>
+          }
+        </label>
+      </fieldset>
+
+      <fieldset class="form__section">
+        <legend>Features</legend>
+
+        <label class="field">
+          <span class="field__label"
+            >Included features <span class="field__hint">(one per line)</span></span
+          >
+          <textarea
+            class="field__input field__input--area"
+            [class.is-invalid]="errorFor('featuresText') !== null"
+            rows="5"
+            formControlName="featuresText"
+            placeholder="Up to 1,200 students&#10;Unlimited teachers&#10;Priority support"
+          ></textarea>
+          @if (errorFor('featuresText'); as message) {
+            <span class="field__error">{{ message }}</span>
+          }
+        </label>
+      </fieldset>
+
+      <fieldset class="form__section">
+        <legend>Availability</legend>
+
+        <label class="check">
+          <input type="checkbox" formControlName="featured" />
+          <span>Feature this plan on the pricing page</span>
+        </label>
+
+        <label class="check">
+          <input type="checkbox" formControlName="active" />
+          <span>Active — available when subscribing a school</span>
+        </label>
+
+        <label class="field field--narrow">
+          <span class="field__label">Display order</span>
+          <input
+            class="field__input"
+            [class.is-invalid]="errorFor('sortOrder') !== null"
+            type="number"
+            min="0"
+            step="1"
+            formControlName="sortOrder"
+            placeholder="0"
+          />
+          <span class="field__hint">Lower numbers appear first.</span>
+          @if (errorFor('sortOrder'); as message) {
+            <span class="field__error">{{ message }}</span>
+          }
+        </label>
+      </fieldset>
+
+      <div class="form__actions">
+        <button type="submit" class="btn-primary" [disabled]="submitting()">
+          @if (submitting()) {
+            <span class="spinner" aria-hidden="true"></span>
+            Saving&hellip;
+          } @else {
+            <app-icon name="check" />
+            {{ editing ? 'Save changes' : 'Create plan' }}
+          }
+        </button>
+        <a class="btn-ghost" routerLink="/admin/plans">Cancel</a>
+      </div>
+    </form>
+  }
+</section>

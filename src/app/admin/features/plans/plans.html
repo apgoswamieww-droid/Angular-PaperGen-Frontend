@@ -1,0 +1,183 @@
+<section class="page">
+  <header class="page__head">
+    <div>
+      <h1>Plans &amp; Billing</h1>
+      <p>Subscription tiers and where every tenant sits today.</p>
+    </div>
+    @if (canManage()) {
+      <a class="btn-primary" routerLink="/admin/plans/new" data-testid="new-plan">
+        <app-icon name="plus" />
+        New plan
+      </a>
+    }
+  </header>
+
+  @if (saved()) {
+    <p class="action-notice--success" role="status" data-testid="saved-banner">
+      <app-icon name="check" />
+      Plan saved.
+    </p>
+  }
+
+  @if (actionError(); as actionError) {
+    <p class="action-error" role="alert">
+      <app-icon name="alert-circle" />
+      {{ actionError }}
+    </p>
+  }
+
+  @if (!loading() && error() === null) {
+    <div class="summary">
+      <article class="summary__item">
+        <app-icon name="credit-card" />
+        <div>
+          <p class="summary__value">{{ plans().length }}</p>
+          <p class="summary__label">Plans</p>
+        </div>
+      </article>
+      <article class="summary__item">
+        <app-icon name="building" />
+        <div>
+          <p class="summary__value">{{ activeSubscriptions() }}</p>
+          <p class="summary__label">Active subscriptions</p>
+        </div>
+      </article>
+      <article class="summary__item">
+        <app-icon name="clock" />
+        <div>
+          <p class="summary__value">{{ trialsEndingSoon() }}</p>
+          <p class="summary__label">Trials ending in 14 days</p>
+        </div>
+      </article>
+      <article class="summary__item">
+        <app-icon name="check" />
+        <div>
+          <p class="summary__value">₹{{ mrr().toLocaleString('en-IN') }}</p>
+          <p class="summary__label">Monthly recurring revenue</p>
+        </div>
+      </article>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="state" role="status">
+      <span class="spinner" aria-hidden="true"></span>
+      <p>Loading plans&hellip;</p>
+    </div>
+  } @else if (error(); as error) {
+    <div class="state state--error" role="alert">
+      <app-icon name="alert-circle" />
+      <p>{{ error }}</p>
+      <button type="button" class="btn-ghost" (click)="load()">Try again</button>
+    </div>
+  } @else if (plans().length === 0) {
+    <div class="empty">
+      <app-icon name="credit-card" />
+      <p>No plans yet. Create your first plan to get started.</p>
+    </div>
+  } @else {
+    <div class="plans">
+      @for (plan of plans(); track plan.code) {
+        <article
+          class="plan"
+          [class.plan--featured]="plan.featured"
+          [class.plan--inactive]="!plan.active"
+          [attr.data-plan]="plan.code"
+        >
+          @if (plan.featured) {
+            <span class="plan__badge">Most popular</span>
+          } @else if (!plan.active) {
+            <span class="plan__badge plan__badge--muted">Inactive</span>
+          }
+
+          <header class="plan__head">
+            <h2>{{ plan.name }}</h2>
+            <span class="plan__code">{{ plan.code }}</span>
+            <p>{{ plan.tagline || '—' }}</p>
+          </header>
+
+          @if (plan.monthlyPrice !== null || plan.annualPrice !== null) {
+            <p class="plan__price">
+              <span class="plan__amount">{{ money(plan.monthlyPrice) }}</span>
+              @if (plan.monthlyPrice !== null) {
+                <span class="plan__period">per month</span>
+              }
+            </p>
+            @if (plan.annualPrice !== null) {
+              <p class="plan__annual">or {{ money(plan.annualPrice) }} billed yearly</p>
+            }
+          } @else {
+            <p class="plan__price">
+              <span class="plan__amount">Custom</span>
+              <span class="plan__period">contact sales</span>
+            </p>
+          }
+
+          <p class="plan__limits">{{ limitsLabel(plan) }}</p>
+
+          <a class="plan__tenants" routerLink="/admin/schools">
+            <app-icon name="building" />
+            {{ plan.tenantCount }} {{ plan.tenantCount === 1 ? 'school' : 'schools' }} on this plan
+          </a>
+
+          @if (plan.features.length > 0) {
+            <ul class="plan__features">
+              @for (feature of plan.features; track feature) {
+                <li>
+                  <span class="plan__check" aria-hidden="true"><app-icon name="check" /></span>
+                  {{ feature }}
+                </li>
+              }
+            </ul>
+          }
+
+          @if (canManage()) {
+            <div class="plan__actions">
+              <a
+                class="btn-ghost"
+                [attr.data-action]="'edit'"
+                [routerLink]="['/admin/plans', plan.code, 'edit']"
+              >
+                Edit
+              </a>
+              <button
+                type="button"
+                class="btn-ghost"
+                [disabled]="busyCode() === plan.code"
+                [attr.data-action]="plan.active ? 'deactivate' : 'activate'"
+                (click)="toggleActive(plan)"
+              >
+                {{ plan.active ? 'Deactivate' : 'Activate' }}
+              </button>
+
+              @if (confirmingCode() === plan.code) {
+                <span class="confirm">
+                  <button
+                    type="button"
+                    class="btn-ghost confirm__danger"
+                    [disabled]="busyCode() === plan.code"
+                    data-action="delete-confirm"
+                    (click)="confirmRemove(plan)"
+                  >
+                    Delete plan
+                  </button>
+                  <button type="button" class="btn-ghost" (click)="cancelRemove()">Cancel</button>
+                </span>
+              } @else {
+                <button
+                  type="button"
+                  class="btn-ghost"
+                  [disabled]="busyCode() === plan.code"
+                  data-action="delete"
+                  (click)="askRemove(plan)"
+                >
+                  Delete
+                </button>
+              }
+            </div>
+          }
+        </article>
+      }
+    </div>
+  }
+</section>

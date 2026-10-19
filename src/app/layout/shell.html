@@ -1,0 +1,177 @@
+<div class="shell" [class.shell--collapsed]="collapsed()" [class.shell--nav-open]="mobileNavOpen()">
+  <header class="topbar">
+    <div class="topbar__cluster">
+      <button
+        type="button"
+        class="icon-btn topbar__menu-btn"
+        (click)="toggleMobileNav()"
+        [attr.aria-label]="mobileNavOpen() ? 'Close navigation' : 'Open navigation'"
+        [attr.aria-expanded]="mobileNavOpen()"
+      >
+        @if (mobileNavOpen()) {
+          <app-icon name="x" />
+        } @else {
+          <app-icon name="menu" />
+        }
+      </button>
+
+      <button
+        type="button"
+        class="icon-btn topbar__collapse-btn"
+        (click)="toggleCollapsed()"
+        [attr.aria-label]="collapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
+        [attr.aria-pressed]="collapsed()"
+      >
+        <app-icon name="panel-left" />
+      </button>
+
+      <a class="topbar__brand" routerLink="/dashboard">
+        <span class="topbar__brand-mark" aria-hidden="true">
+          <app-icon name="file-text" />
+        </span>
+        <span class="topbar__brand-name">Paper Generator</span>
+      </a>
+    </div>
+
+    <label class="topbar__search">
+      <app-icon name="search" />
+      <input type="search" placeholder="Search papers, questions&hellip;" aria-label="Search" />
+    </label>
+
+    <div class="topbar__actions">
+      <button type="button" class="icon-btn topbar__bell" aria-label="Notifications">
+        <app-icon name="bell" />
+        <span class="topbar__bell-dot" aria-hidden="true"></span>
+      </button>
+
+      <div class="user-menu-wrap" #userMenu>
+        <button
+          type="button"
+          class="user-chip"
+          [class.is-open]="userMenuOpen()"
+          (click)="toggleUserMenu()"
+          aria-haspopup="menu"
+          [attr.aria-expanded]="userMenuOpen()"
+        >
+          <span class="user-chip__avatar" aria-hidden="true">{{ initials() }}</span>
+          <span class="user-chip__meta">
+            <span class="user-chip__name">{{ displayName() }}</span>
+            <span class="user-chip__role">{{ roleLabel() }}</span>
+          </span>
+          <app-icon name="chevron-down" class="user-chip__chevron" />
+        </button>
+
+        @if (userMenuOpen()) {
+          <div class="user-menu" role="menu" aria-label="Account">
+            <div class="user-menu__head">
+              <span class="user-menu__avatar" aria-hidden="true">{{ initials() }}</span>
+              <span class="user-menu__meta">
+                <span class="user-menu__name">{{ displayName() }}</span>
+                <span class="user-menu__email">{{ user()?.email ?? 'admin@papergen.app' }}</span>
+              </span>
+            </div>
+
+            <div class="user-menu__divider" role="separator"></div>
+
+            <a
+              class="user-menu__item"
+              routerLink="/settings"
+              role="menuitem"
+              (click)="closeUserMenu()"
+            >
+              <app-icon name="settings" />
+              Profile &amp; settings
+            </a>
+
+            <button
+              type="button"
+              class="user-menu__item user-menu__item--danger"
+              role="menuitem"
+              (click)="logout()"
+            >
+              <app-icon name="log-out" />
+              Sign out
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+  </header>
+
+  <aside class="sidebar" aria-label="Primary">
+    <nav class="sidebar__nav">
+      @for (section of navSections(); track section.label) {
+        <p class="sidebar__section">{{ section.label }}</p>
+        @for (item of section.items; track item.path) {
+          @if (item.children; as children) {
+            <div class="nav-group" [class.is-open]="isGroupOpen(item)">
+              <a
+                class="nav-item nav-group__head"
+                [routerLink]="item.path"
+                routerLinkActive="is-active"
+                [routerLinkActiveOptions]="{ exact: true }"
+                ariaCurrentWhenActive="page"
+                [attr.title]="item.label"
+                [attr.aria-expanded]="isGroupOpen(item)"
+                data-testid="nav-group-head"
+                (click)="onGroupClick(item)"
+              >
+                <app-icon [name]="item.icon" />
+                <span class="nav-item__label">{{ item.label }}</span>
+                <app-icon name="chevron-down" class="nav-group__chevron" />
+              </a>
+              @if (isGroupOpen(item)) {
+                <div class="nav-group__children">
+                  @for (child of children; track child.path) {
+                    <a
+                      class="nav-item nav-item--child"
+                      [routerLink]="child.path"
+                      routerLinkActive="is-active"
+                      [routerLinkActiveOptions]="{ exact: child.exact === true }"
+                      ariaCurrentWhenActive="page"
+                      [attr.title]="child.label"
+                    >
+                      <span class="nav-item__label">{{ child.label }}</span>
+                    </a>
+                  }
+                </div>
+              }
+            </div>
+          } @else {
+            <a
+              class="nav-item"
+              [routerLink]="item.path"
+              routerLinkActive="is-active"
+              [routerLinkActiveOptions]="{ exact: item.exact === true }"
+              ariaCurrentWhenActive="page"
+              [attr.title]="item.label"
+            >
+              <app-icon [name]="item.icon" />
+              <span class="nav-item__label">{{ item.label }}</span>
+            </a>
+          }
+        }
+      }
+    </nav>
+
+    <div class="sidebar__foot">
+      <p class="sidebar__version">Paper Generator v0.1.0</p>
+    </div>
+  </aside>
+
+  <button
+    type="button"
+    class="scrim"
+    (click)="closeMobileNav()"
+    aria-label="Close navigation"
+  ></button>
+
+  <main class="content">
+    <router-outlet />
+  </main>
+
+  <footer class="footer">
+    <p class="footer__copy">&copy; {{ year }} Paper Generator. All rights reserved.</p>
+    <p class="footer__meta">Made for schools &middot; v0.1.0</p>
+  </footer>
+</div>

@@ -1,0 +1,319 @@
+<section class="page">
+  <header class="page__head">
+    <div>
+      <h1>Users &amp; Roles</h1>
+      <p>Manage who can sign in to your school panel and what they can access.</p>
+    </div>
+    <a class="btn-primary" routerLink="/users/new" data-testid="add-user">
+      <app-icon name="user-plus" />
+      Add user
+    </a>
+  </header>
+
+  @if (summary(); as summary) {
+    <div class="stats">
+      <div class="stat">
+        <span class="stat__value">{{ summary.totalUsers }}</span>
+        <span class="stat__label">Total users</span>
+      </div>
+      <div class="stat">
+        <span class="stat__value">{{ summary.activeUsers }}</span>
+        <span class="stat__label">Active</span>
+      </div>
+      <div class="stat">
+        <span class="stat__value">{{ summary.suspendedUsers }}</span>
+        <span class="stat__label">Suspended</span>
+      </div>
+      <div class="stat">
+        <span class="stat__value">{{ summary.schoolAdmins }}</span>
+        <span class="stat__label">School admins</span>
+      </div>
+      <div class="stat">
+        <span class="stat__value">{{ summary.teachers }}</span>
+        <span class="stat__label">Teachers</span>
+      </div>
+      <div class="stat">
+        <span class="stat__value">{{ summary.staff }}</span>
+        <span class="stat__label">Staff</span>
+      </div>
+      <div class="stat">
+        <span class="stat__value">{{ summary.students }}</span>
+        <span class="stat__label">Students</span>
+      </div>
+    </div>
+  }
+
+  <section class="card">
+    @if (saved()) {
+      <p class="action-notice action-notice--success" role="status" data-testid="saved-banner">
+        <app-icon name="check" />
+        User saved successfully.
+        <button type="button" class="notice-dismiss" (click)="dismissSaved()">
+          <app-icon name="x" />
+          <span class="sr-only">Dismiss</span>
+        </button>
+      </p>
+    }
+
+    @if (actionError(); as actionError) {
+      <p class="action-error" role="alert" data-testid="action-error">
+        <app-icon name="alert-circle" />
+        {{ actionError }}
+      </p>
+    }
+
+    @if (notice(); as notice) {
+      <p
+        class="action-notice"
+        [class.action-notice--success]="notice.sent"
+        role="status"
+        data-testid="reset-notice"
+      >
+        <app-icon [name]="notice.sent ? 'check' : 'alert-circle'" />
+        <span class="notice-body">
+          @if (notice.sent) {
+            A new password was emailed to <strong>{{ notice.email }}</strong
+            >. Save it now — it will not be shown again:
+          } @else {
+            Email delivery failed. Share this new password with
+            <strong>{{ notice.email }}</strong> yourself:
+          }
+          <code class="notice-code" data-testid="reset-password-value">{{ notice.password }}</code>
+          <button type="button" class="btn-ghost notice-copy" (click)="copyPassword()">
+            {{ copied() ? 'Copied' : 'Copy' }}
+          </button>
+        </span>
+      </p>
+    }
+
+    <div class="toolbar">
+      <label class="search">
+        <app-icon name="search" />
+        <input
+          type="search"
+          data-testid="user-search"
+          placeholder="Search by name or email&hellip;"
+          aria-label="Search users"
+          [value]="query()"
+          (input)="onSearch($any($event.target).value)"
+        />
+      </label>
+
+      <label class="select">
+        <span class="sr-only">Filter by role</span>
+        <select
+          data-testid="role-filter"
+          [value]="roleFilter()"
+          (change)="setRole($any($event.target).value)"
+        >
+          @for (role of roles; track role) {
+            <option [value]="role">{{ roleLabel(role) }}</option>
+          }
+        </select>
+      </label>
+
+      <div class="filters" role="group" aria-label="Filter by status">
+        @for (status of statuses; track status) {
+          <button
+            type="button"
+            class="filter-chip"
+            [class.is-active]="statusFilter() === status"
+            [attr.data-status]="status"
+            [attr.aria-pressed]="statusFilter() === status"
+            (click)="setStatus(status)"
+          >
+            {{ status }}
+          </button>
+        }
+      </div>
+    </div>
+
+    @if (loading()) {
+      <div class="state" role="status">
+        <span class="spinner" aria-hidden="true"></span>
+        <p>Loading users&hellip;</p>
+      </div>
+    } @else if (error(); as error) {
+      <div class="state state--error" role="alert">
+        <app-icon name="alert-circle" />
+        <p>{{ error }}</p>
+        <button type="button" class="btn-ghost" (click)="load()">Try again</button>
+      </div>
+    } @else if (rows().length > 0) {
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>
+                <button type="button" class="th-sort" data-sort="name" (click)="sortBy('name')">
+                  User
+                  @if (sort() === 'name') {
+                    <app-icon
+                      name="chevron-down"
+                      class="th-sort__icon"
+                      [class.is-asc]="dir() === 'asc'"
+                    />
+                  }
+                </button>
+              </th>
+              <th>Role</th>
+              <th>Phone</th>
+              <th>Status</th>
+              <th>Last login</th>
+              <th>
+                <button
+                  type="button"
+                  class="th-sort"
+                  data-sort="createdAt"
+                  (click)="sortBy('createdAt')"
+                >
+                  Created
+                  @if (sort() === 'createdAt') {
+                    <app-icon
+                      name="chevron-down"
+                      class="th-sort__icon"
+                      [class.is-asc]="dir() === 'asc'"
+                    />
+                  }
+                </button>
+              </th>
+              <th aria-label="Actions"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (user of rows(); track user.id) {
+              <tr [attr.data-user]="user.email">
+                <td>
+                  <span class="name-cell">{{ user.name }}</span>
+                  <span class="sub-cell">{{ user.email }}</span>
+                </td>
+                <td>
+                  <span [class]="'role-badge role-badge--' + user.role">
+                    {{ roleLabel(user.role) }}
+                  </span>
+                </td>
+                <td>{{ user.phone || '—' }}</td>
+                <td>
+                  <span [class]="'pill pill--' + user.status">{{ user.status }}</span>
+                </td>
+                <td>{{ idLabel(user.lastLoginAt) }}</td>
+                <td>{{ idLabel(user.createdAt) }}</td>
+                <td class="row-actions">
+                  @if (confirmId() === user.id) {
+                    <span class="confirm">
+                      <span class="confirm__text">Delete {{ user.name }}?</span>
+                      <button
+                        type="button"
+                        class="btn-ghost btn-ghost--danger"
+                        [disabled]="busyId() === user.id"
+                        data-action="confirm-delete"
+                        (click)="confirmDelete(user)"
+                      >
+                        Confirm
+                      </button>
+                      <button type="button" class="btn-ghost" (click)="cancelDelete()">
+                        Cancel
+                      </button>
+                    </span>
+                  } @else {
+                    <a
+                      class="btn-ghost"
+                      [attr.data-link]="'edit'"
+                      [routerLink]="['/users', user.id, 'edit']"
+                    >
+                      Edit
+                    </a>
+                    <button
+                      type="button"
+                      class="btn-ghost"
+                      [disabled]="busyId() === user.id"
+                      data-action="reset-password"
+                      (click)="resetPassword(user)"
+                    >
+                      @if (busyId() === user.id) {
+                        Working&hellip;
+                      } @else {
+                        Reset password
+                      }
+                    </button>
+                    @if (!isSelf(user)) {
+                      <button
+                        type="button"
+                        class="btn-ghost"
+                        [disabled]="busyId() === user.id"
+                        [attr.data-action]="user.status === 'active' ? 'suspend' : 'activate'"
+                        (click)="toggleStatus(user)"
+                      >
+                        {{ user.status === 'active' ? 'Suspend' : 'Activate' }}
+                      </button>
+                      <button
+                        type="button"
+                        class="btn-ghost btn-ghost--danger"
+                        [disabled]="busyId() === user.id"
+                        data-action="delete"
+                        (click)="requestDelete(user)"
+                      >
+                        Delete
+                      </button>
+                    } @else {
+                      <span class="self-tag">You</span>
+                    }
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <footer class="pager">
+        <p class="pager__range">
+          Showing {{ rangeStart() }}–{{ rangeEnd() }} of {{ total() }} users
+        </p>
+        <label class="select select--compact">
+          <span class="sr-only">Rows per page</span>
+          <select
+            data-testid="page-size"
+            [value]="pageSize()"
+            (change)="setPageSize($any($event.target).value)"
+          >
+            @for (size of pageSizes; track size) {
+              <option [value]="size">{{ size }} / page</option>
+            }
+          </select>
+        </label>
+        <div class="pager__buttons">
+          <button
+            type="button"
+            class="btn-ghost"
+            data-action="prev-page"
+            [disabled]="page() <= 1"
+            (click)="goToPage(page() - 1)"
+          >
+            Previous
+          </button>
+          <span class="pager__page">Page {{ page() }} of {{ pageCount() }}</span>
+          <button
+            type="button"
+            class="btn-ghost"
+            data-action="next-page"
+            [disabled]="page() >= pageCount()"
+            (click)="goToPage(page() + 1)"
+          >
+            Next
+          </button>
+        </div>
+      </footer>
+    } @else if (total() === 0) {
+      <div class="empty">
+        <app-icon name="user-plus" />
+        <p>No users yet. Add your first teacher, staff member or student.</p>
+      </div>
+    } @else {
+      <div class="empty">
+        <app-icon name="search" />
+        <p>No users match your filters.</p>
+      </div>
+    }
+  </section>
+</section>

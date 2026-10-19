@@ -1,0 +1,31 @@
+<section class="page">
+  <header class="page__head">
+    <div>
+      <h1>Masters</h1>
+      <p>
+        Configure the building blocks — mediums, standards and subjects through to topics and levels
+        — used across questions and papers.
+      </p>
+    </div>
+  </header>
+
+  <div class="master-grid">
+    @for (master of masters; track master.path) {
+      <a
+        class="master-card"
+        [routerLink]="master.path"
+        data-testid="master-card"
+        [attr.data-master]="master.path"
+      >
+        <span class="master-card__icon" aria-hidden="true">
+          <app-icon [name]="master.icon" />
+        </span>
+        <span class="master-card__body">
+          <span class="master-card__title">{{ master.title }}</span>
+          <span class="master-card__text">{{ master.description }}</span>
+        </span>
+        <app-icon name="arrow-right" class="master-card__go" />
+      </a>
+    }
+  </div>
+</section>

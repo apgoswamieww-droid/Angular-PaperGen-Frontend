@@ -1,0 +1,172 @@
+<section class="page">
+  <header class="page__head">
+    <div>
+      <h1>Schools &amp; Institutes</h1>
+      <p>Every tenant on the platform, with plan, usage and status.</p>
+    </div>
+    @if (canCreate()) {
+      <a class="btn-primary" routerLink="/admin/schools/new">
+        <app-icon name="plus" />
+        Add school
+      </a>
+    }
+  </header>
+
+  <section class="card">
+    @if (actionError(); as actionError) {
+      <p class="action-error" role="alert">
+        <app-icon name="alert-circle" />
+        {{ actionError }}
+      </p>
+    }
+
+    @if (actionNotice(); as notice) {
+      <p
+        class="action-notice"
+        [class.action-notice--success]="notice.sent"
+        role="status"
+        data-testid="reset-notice"
+      >
+        <app-icon [name]="notice.sent ? 'check' : 'alert-circle'" />
+        @if (!notice.sent) {
+          The email to <strong>{{ notice.email }}</strong> could not be delivered. The link was
+          written to the API logs.
+        } @else if (notice.kind === 'reset') {
+          Reset link sent to <strong>{{ notice.email }}</strong> — it stays valid for
+          {{ notice.expiresInMinutes }} minutes.
+        } @else {
+          A new setup link is on its way to <strong>{{ notice.email }}</strong> — it stays valid for
+          {{ notice.expiresInHours }} hours.
+        }
+      </p>
+    }
+
+    <div class="toolbar">
+      <label class="search">
+        <app-icon name="search" />
+        <input
+          type="search"
+          data-testid="school-search"
+          placeholder="Search by name or city&hellip;"
+          aria-label="Search schools"
+          [value]="query()"
+          (input)="updateQuery($any($event.target).value)"
+        />
+      </label>
+
+      <div class="filters" role="group" aria-label="Filter by status">
+        @for (status of filters; track status) {
+          <button
+            type="button"
+            class="filter-chip"
+            [class.is-active]="statusFilter() === status"
+            [attr.data-status]="status"
+            [attr.aria-pressed]="statusFilter() === status"
+            (click)="updateStatus(status)"
+          >
+            {{ status }}
+          </button>
+        }
+      </div>
+    </div>
+
+    @if (loading()) {
+      <div class="state" role="status">
+        <span class="spinner" aria-hidden="true"></span>
+        <p>Loading schools&hellip;</p>
+      </div>
+    } @else if (error(); as error) {
+      <div class="state state--error" role="alert">
+        <app-icon name="alert-circle" />
+        <p>{{ error }}</p>
+        <button type="button" class="btn-ghost" (click)="load()">Try again</button>
+      </div>
+    } @else if (filtered().length > 0) {
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>School</th>
+              <th>Type</th>
+              <th>Plan</th>
+              <th>Users</th>
+              <th>Status</th>
+              <th>Created</th>
+              <th aria-label="Actions"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (school of filtered(); track school.id) {
+              <tr>
+                <td>
+                  <span class="name-cell">{{ school.name }}</span>
+                  <span class="sub-cell">{{ school.city || '—' }}</span>
+                </td>
+                <td>{{ typeLabel(school.type) }}</td>
+                <td>{{ school.planName }}</td>
+                <td>{{ school.userCount }}</td>
+                <td>
+                  <span [class]="'pill pill--' + school.status">{{ school.status }}</span>
+                </td>
+                <td>{{ createdLabel(school.createdAt) }}</td>
+                <td class="row-actions">
+                  <a
+                    class="btn-ghost"
+                    [attr.data-link]="'view'"
+                    [routerLink]="['/admin/schools', school.id]"
+                  >
+                    <app-icon name="eye" />
+                    View
+                  </a>
+                  <a
+                    class="btn-ghost"
+                    [attr.data-link]="'edit'"
+                    [routerLink]="['/admin/schools', school.id, 'edit']"
+                  >
+                    Edit
+                  </a>
+                  <button
+                    type="button"
+                    class="btn-ghost"
+                    [disabled]="busyId() === school.id"
+                    data-action="reset-password"
+                    (click)="resetPassword(school)"
+                  >
+                    @if (busyId() === school.id) {
+                      Working&hellip;
+                    } @else {
+                      Reset password
+                    }
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-ghost"
+                    [disabled]="busyId() === school.id"
+                    [attr.data-action]="school.status === 'active' ? 'suspend' : 'activate'"
+                    (click)="toggleStatus(school)"
+                  >
+                    @if (busyId() === school.id) {
+                      Working&hellip;
+                    } @else {
+                      {{ school.status === 'active' ? 'Suspend' : 'Activate' }}
+                    }
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else if (schools().length === 0) {
+      <div class="empty">
+        <app-icon name="building" />
+        <p>No schools yet. Register your first school to get started.</p>
+      </div>
+    } @else {
+      <div class="empty">
+        <app-icon name="search" />
+        <p>No schools match your filters.</p>
+      </div>
+    }
+  </section>
+</section>

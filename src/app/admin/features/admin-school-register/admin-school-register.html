@@ -1,0 +1,193 @@
+<section class="page">
+  <nav class="crumbs">
+    <a routerLink="/admin/schools">
+      <app-icon name="arrow-right" class="crumbs__arrow" />
+      Back to schools
+    </a>
+  </nav>
+
+  @if (!canRegister()) {
+    <section class="card notice" role="alert">
+      <app-icon name="shield" />
+      <div>
+        <h1>Not available</h1>
+        <p>Only super admins can register schools.</p>
+      </div>
+    </section>
+  } @else if (created(); as result) {
+    <section class="card success" data-testid="school-created">
+      <span class="success__badge">
+        <app-icon name="check" />
+      </span>
+      <h1>{{ result.school.name }} is ready</h1>
+      <p class="success__lede">
+        The school workspace was created
+        <span class="success__slug">({{ result.school.slug }})</span> on the
+        {{ planLabel(result.school.plan) }} plan.
+      </p>
+
+      @if (result.invite.sent) {
+        <p class="success__invite">
+          <app-icon name="mail" />
+          An invitation email is on its way to <strong>{{ result.invite.email }}</strong
+          >. The link lets them set their password and sign in, and stays valid for
+          {{ result.invite.expiresInHours }} hours.
+        </p>
+      } @else {
+        <p class="success__invite success__invite--warn">
+          <app-icon name="alert-circle" />
+          The invitation email to <strong>{{ result.invite.email }}</strong> could not be delivered.
+          The invite link was written to the API console/logs - share it securely, or fix the SMTP
+          settings and resend a reset link.
+        </p>
+      }
+
+      <div class="success__actions">
+        <a class="btn-primary" routerLink="/admin/schools">Back to schools</a>
+        <button type="button" class="btn-ghost" (click)="addAnother()">
+          <app-icon name="plus" />
+          Add another school
+        </button>
+      </div>
+    </section>
+  } @else {
+    <header class="page__head">
+      <div>
+        <h1>Register a school</h1>
+        <p>Create the workspace and invite its first admin in one step.</p>
+      </div>
+    </header>
+
+    <form class="card form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      @if (formError(); as formError) {
+        <p class="alert" role="alert">
+          <app-icon name="alert-circle" />
+          {{ formError }}
+        </p>
+      }
+
+      <fieldset class="form__section">
+        <legend>School details</legend>
+
+        <label class="field">
+          <span class="field__label">School name</span>
+          <input
+            class="field__input"
+            [class.is-invalid]="errorFor('name') !== null"
+            type="text"
+            formControlName="name"
+            placeholder="e.g. Sunrise Public School"
+            autocomplete="organization"
+          />
+          @if (errorFor('name'); as message) {
+            <span class="field__error">{{ message }}</span>
+          }
+        </label>
+
+        <div class="form__row">
+          <label class="field">
+            <span class="field__label">Type</span>
+            <select class="field__input" formControlName="type">
+              @for (option of types; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="field">
+            <span class="field__label">Plan</span>
+            <select
+              class="field__input"
+              [class.is-invalid]="errorFor('plan') !== null || plansError() !== null"
+              formControlName="plan"
+            >
+              @if (plansLoading()) {
+                <option value="">Loading plans&hellip;</option>
+              } @else if (plans().length === 0) {
+                <option value="">No active plans</option>
+              }
+              @for (option of plans(); track option.code) {
+                <option [value]="option.code">{{ option.name }}</option>
+              }
+            </select>
+            @if (plansError(); as message) {
+              <span class="field__error">{{ message }}</span>
+            } @else if (plans().length === 0 && !plansLoading()) {
+              <span class="field__error">No active plans available. Activate a plan first.</span>
+            } @else if (errorFor('plan'); as message) {
+              <span class="field__error">{{ message }}</span>
+            }
+          </label>
+        </div>
+
+        <label class="field">
+          <span class="field__label">City <span class="field__hint">(optional)</span></span>
+          <input
+            class="field__input"
+            [class.is-invalid]="errorFor('city') !== null"
+            type="text"
+            formControlName="city"
+            placeholder="e.g. Nagpur"
+            autocomplete="address-level2"
+          />
+          @if (errorFor('city'); as message) {
+            <span class="field__error">{{ message }}</span>
+          }
+        </label>
+      </fieldset>
+
+      <fieldset class="form__section">
+        <legend>First school admin</legend>
+
+        <label class="field">
+          <span class="field__label">Admin name</span>
+          <input
+            class="field__input"
+            [class.is-invalid]="errorFor('adminName') !== null"
+            type="text"
+            formControlName="adminName"
+            placeholder="e.g. Priya Sharma"
+            autocomplete="name"
+          />
+          @if (errorFor('adminName'); as message) {
+            <span class="field__error">{{ message }}</span>
+          }
+        </label>
+
+        <label class="field">
+          <span class="field__label">Admin email</span>
+          <input
+            class="field__input"
+            [class.is-invalid]="errorFor('adminEmail') !== null"
+            type="email"
+            formControlName="adminEmail"
+            placeholder="principal@school.edu"
+            autocomplete="email"
+          />
+          @if (errorFor('adminEmail'); as message) {
+            <span class="field__error">{{ message }}</span>
+          }
+        </label>
+
+        <p class="invite-note">
+          <app-icon name="mail" />
+          This admin receives an email with a link to set their own password. Until it is accepted,
+          the account cannot sign in.
+        </p>
+      </fieldset>
+
+      <div class="form__actions">
+        <button type="submit" class="btn-primary" [disabled]="submitting() || plansLoading()">
+          @if (submitting()) {
+            <span class="spinner" aria-hidden="true"></span>
+            Creating&hellip;
+          } @else {
+            <app-icon name="plus" />
+            Create school
+          }
+        </button>
+        <a class="btn-ghost" routerLink="/admin/schools">Cancel</a>
+      </div>
+    </form>
+  }
+</section>

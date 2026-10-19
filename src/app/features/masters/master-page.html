@@ -1,0 +1,25 @@
+<section class="page">
+  <header class="page__head">
+    <div>
+      <a class="back-link" routerLink="/masters" data-testid="back-to-masters">
+        <app-icon name="arrow-right" />
+        All masters
+      </a>
+      <h1>{{ title() }}</h1>
+      <p>{{ description() }}</p>
+    </div>
+  </header>
+
+  <section class="card">
+    <div class="empty">
+      <span class="empty__icon" aria-hidden="true">
+        <app-icon [name]="icon()" />
+      </span>
+      <h2>Module coming soon</h2>
+      <p>
+        The {{ title() }} module is on its way. You will be able to add, edit and organise records
+        here, and they will feed into question tagging and paper generation.
+      </p>
+    </div>
+  </section>
+</section>

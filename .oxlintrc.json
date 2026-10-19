@@ -1,0 +1,17 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "unicorn", "oxc"],
+  "rules": {
+    "typescript/no-explicit-any": "off",
+    "typescript/no-floating-promises": "error",
+    "typescript/no-unnecessary-condition": "off",
+    "no-console": "error",
+    "eqeqeq": "error",
+    "prefer-const": "error"
+  },
+  "env": {
+    "browser": true,
+    "es2024": true
+  },
+  "ignorePatterns": ["dist", ".angular"]
+}

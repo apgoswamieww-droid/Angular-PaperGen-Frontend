@@ -1,0 +1,33 @@
+<section class="page">
+  <header class="page__head">
+    <div>
+      <h1>Reports</h1>
+      <p>Insights across classes, students and papers. New reports appear here as they ship.</p>
+    </div>
+  </header>
+
+  <div class="report-grid">
+    @for (report of reports; track report.path) {
+      <a
+        class="report-card"
+        [routerLink]="report.path"
+        data-testid="report-card"
+        [attr.data-report]="report.path"
+      >
+        <span class="report-card__icon" aria-hidden="true">
+          <app-icon [name]="report.icon" />
+        </span>
+        <span class="report-card__body">
+          <span class="report-card__title">
+            {{ report.title }}
+            @if (report.soon === true) {
+              <span class="report-card__badge">Coming soon</span>
+            }
+          </span>
+          <span class="report-card__text">{{ report.description }}</span>
+        </span>
+        <app-icon name="arrow-right" class="report-card__go" />
+      </a>
+    }
+  </div>
+</section>

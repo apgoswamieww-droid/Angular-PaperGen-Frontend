@@ -1,0 +1,498 @@
+<section class="page">
+  <nav class="crumbs">
+    <a routerLink="/admin/schools">
+      <app-icon name="arrow-right" class="crumbs__arrow" />
+      Back to schools
+    </a>
+  </nav>
+
+  @if (saved()) {
+    <p class="saved-banner" role="status" data-testid="saved-banner">
+      <app-icon name="check" />
+      School configuration saved.
+    </p>
+  }
+
+  @if (loading()) {
+    <section class="card">
+      <div class="state" role="status">
+        <span class="spinner" aria-hidden="true"></span>
+        <p>Loading school details&hellip;</p>
+      </div>
+    </section>
+  } @else if (error(); as error) {
+    <section class="card">
+      <div class="state state--error" role="alert">
+        <app-icon name="alert-circle" />
+        <p>{{ error }}</p>
+        <button type="button" class="btn-ghost" (click)="load()">Try again</button>
+      </div>
+    </section>
+  } @else if (result(); as data) {
+    <section class="card hero">
+      <div class="hero__top">
+        <div class="hero__brand">
+          @if (data.school.logo) {
+            <img
+              class="hero__logo"
+              [src]="data.school.logo"
+              [alt]="data.school.name + ' logo'"
+              data-testid="school-logo"
+            />
+          } @else {
+            <span class="hero__initials" [style.background]="data.school.brandColor">{{
+              initials()
+            }}</span>
+          }
+          <div>
+            <h1>{{ data.school.name }}</h1>
+            <p class="hero__domain">
+              <app-icon name="shield" />
+              {{ data.school.slug }}.papergen.app
+            </p>
+          </div>
+        </div>
+
+        <div class="hero__meta">
+          <span class="pill pill--neutral">{{ typeLabel(data.school.type) }}</span>
+          <span class="pill pill--neutral">{{ data.school.planName }}</span>
+          <span [class]="'pill pill--' + data.school.status">{{ data.school.status }}</span>
+        </div>
+      </div>
+
+      @if (canManage()) {
+        <div class="hero__actions">
+          <a class="btn-primary" [routerLink]="['/admin/schools', data.school.id, 'edit']">
+            <app-icon name="settings" />
+            Edit configuration
+          </a>
+          <button
+            type="button"
+            class="btn-ghost"
+            data-action="toggle-status"
+            [disabled]="toggling()"
+            (click)="toggleStatus()"
+          >
+            @if (toggling()) {
+              Working&hellip;
+            } @else {
+              {{ data.school.status === 'active' ? 'Suspend school' : 'Activate school' }}
+            }
+          </button>
+          @if (data.stats.pendingSetupUsers > 0) {
+            <button
+              type="button"
+              class="btn-ghost"
+              data-action="resend-invite"
+              [disabled]="resending()"
+              (click)="resendInvite()"
+            >
+              <app-icon name="mail" />
+              {{ resending() ? 'Sending&hellip;' : 'Resend setup link' }}
+            </button>
+          }
+          <button
+            type="button"
+            class="btn-ghost"
+            data-action="reset-password"
+            [disabled]="resetting()"
+            (click)="resetPassword()"
+          >
+            <app-icon name="mail" />
+            {{ resetting() ? 'Sending&hellip;' : 'Reset password' }}
+          </button>
+        </div>
+      }
+
+      @if (actionError(); as actionError) {
+        <p class="alert" role="alert">
+          <app-icon name="alert-circle" />
+          {{ actionError }}
+        </p>
+      }
+
+      @if (resent(); as invite) {
+        <p
+          class="alert"
+          [class.alert--success]="invite.sent"
+          role="status"
+          data-testid="resent-banner"
+        >
+          <app-icon [name]="invite.sent ? 'check' : 'alert-circle'" />
+          @if (invite.sent) {
+            A new setup link is on its way to <strong>{{ invite.email }}</strong
+            >. It stays valid for {{ invite.expiresInHours }} hours and replaces the previous one.
+          } @else {
+            The email to <strong>{{ invite.email }}</strong> could not be delivered. The link was
+            written to the API logs.
+          }
+        </p>
+      }
+
+      @if (resetLink(); as reset) {
+        <p
+          class="alert"
+          [class.alert--success]="reset.sent"
+          role="status"
+          data-testid="reset-banner"
+        >
+          <app-icon [name]="reset.sent ? 'check' : 'alert-circle'" />
+          @if (!reset.sent) {
+            The email to <strong>{{ reset.email }}</strong> could not be delivered. The link was
+            written to the API logs.
+          } @else if (reset.kind === 'reset') {
+            Reset link sent to <strong>{{ reset.email }}</strong> — it stays valid for
+            {{ reset.expiresInMinutes }} minutes.
+          } @else {
+            The admin has not set a password yet, so a new setup link is on its way to
+            <strong>{{ reset.email }}</strong> — it stays valid for
+            {{ reset.expiresInHours }} hours.
+          }
+        </p>
+      }
+    </section>
+
+    <section class="stats" aria-label="School analytics">
+      <article class="card stat">
+        <span class="stat__label">Total users</span>
+        <strong class="stat__value">{{ data.stats.totalUsers }}</strong>
+        <span class="stat__sub"
+          >{{ data.stats.schoolAdmins }} admin &middot; {{ data.stats.teachers }} teachers &middot;
+          {{ data.stats.staff }} staff &middot; {{ data.stats.students }} students</span
+        >
+      </article>
+      <article class="card stat">
+        <span class="stat__label">Active users</span>
+        <strong class="stat__value">{{ data.stats.activeUsers }}</strong>
+        <span class="stat__sub"
+          >{{ data.stats.suspendedUsers }} suspended &middot;
+          {{ data.stats.lockedUsers }} locked</span
+        >
+      </article>
+      <article class="card stat">
+        <span class="stat__label">Pending setup</span>
+        <strong class="stat__value">{{ data.stats.pendingSetupUsers }}</strong>
+        <span class="stat__sub">{{ data.stats.pendingInvites }} open invitations</span>
+      </article>
+      <article class="card stat">
+        <span class="stat__label">Active sessions</span>
+        <strong class="stat__value">{{ data.stats.activeSessions }}</strong>
+        <span class="stat__sub">Last login {{ dateTimeLabel(data.stats.lastLoginAt) }}</span>
+      </article>
+    </section>
+
+    <section class="panels">
+      <article class="card panel">
+        <header class="panel__head">
+          <h2>Contact</h2>
+        </header>
+        <dl class="rows">
+          <div class="row">
+            <dt>School email</dt>
+            <dd>{{ data.school.email || '—' }}</dd>
+          </div>
+          <div class="row">
+            <dt>Phone</dt>
+            <dd>{{ data.school.phone || '—' }}</dd>
+          </div>
+          <div class="row">
+            <dt>Website</dt>
+            <dd>
+              @if (data.school.website) {
+                <a [href]="data.school.website" target="_blank" rel="noopener">{{
+                  data.school.website
+                }}</a>
+              } @else {
+                —
+              }
+            </dd>
+          </div>
+        </dl>
+      </article>
+
+      <article class="card panel">
+        <header class="panel__head">
+          <h2>Address</h2>
+        </header>
+        @if (addressLines().length > 0) {
+          <address class="address">
+            @for (line of addressLines(); track line) {
+              <span>{{ line }}</span>
+            }
+          </address>
+        } @else {
+          <p class="muted">No address on record.</p>
+        }
+      </article>
+
+      <article class="card panel">
+        <header class="panel__head">
+          <h2>Academic</h2>
+        </header>
+        <dl class="rows">
+          <div class="row">
+            <dt>Board</dt>
+            <dd>{{ boardLabel(data.school.board) }}</dd>
+          </div>
+          <div class="row">
+            <dt>Affiliation no.</dt>
+            <dd>{{ data.school.affiliationNumber || '—' }}</dd>
+          </div>
+          <div class="row">
+            <dt>Principal</dt>
+            <dd>{{ data.school.principalName || '—' }}</dd>
+          </div>
+          <div class="row">
+            <dt>Academic year</dt>
+            <dd>{{ data.school.academicYear || '—' }}</dd>
+          </div>
+          <div class="row">
+            <dt>Timezone</dt>
+            <dd>{{ data.school.timezone }}</dd>
+          </div>
+        </dl>
+      </article>
+
+      <article class="card panel">
+        <header class="panel__head">
+          <h2>Branding</h2>
+        </header>
+        <dl class="rows">
+          <div class="row">
+            <dt>Tagline</dt>
+            <dd>{{ data.school.tagline || '—' }}</dd>
+          </div>
+          <div class="row">
+            <dt>Brand colour</dt>
+            <dd class="colour">
+              <span class="colour__chip" [style.background]="data.school.brandColor"></span>
+              <code>{{ data.school.brandColor }}</code>
+            </dd>
+          </div>
+          <div class="row">
+            <dt>Logo</dt>
+            <dd>{{ data.school.logo ? 'Uploaded' : 'Not uploaded' }}</dd>
+          </div>
+        </dl>
+      </article>
+
+      <article class="card panel">
+        <header class="panel__head">
+          <h2>Plan &amp; billing</h2>
+          @if (canManage()) {
+            <button
+              type="button"
+              class="btn-ghost btn-ghost--sm"
+              data-action="edit-billing"
+              (click)="billingOpen() ? closeBilling() : openBilling()"
+            >
+              {{ billingOpen() ? 'Close' : 'Edit billing' }}
+            </button>
+          }
+        </header>
+
+        @if (billingNotice(); as notice) {
+          <p class="alert alert--success" role="status" data-testid="billing-notice">
+            <app-icon name="check" />
+            {{ notice }}
+          </p>
+        }
+
+        @if (billingError(); as billingError) {
+          <p class="alert" role="alert" data-testid="billing-error">
+            <app-icon name="alert-circle" />
+            {{ billingError }}
+          </p>
+        }
+
+        <dl class="rows">
+          <div class="row">
+            <dt>Plan</dt>
+            <dd>{{ data.school.planName }}</dd>
+          </div>
+          <div class="row">
+            <dt>Subscription</dt>
+            <dd>
+              <span [class]="'pill pill--' + data.school.subscriptionStatus">{{
+                subscriptionLabel(data.school.subscriptionStatus)
+              }}</span>
+            </dd>
+          </div>
+          <div class="row">
+            <dt>Billing cycle</dt>
+            <dd>{{ billingCycleLabel(data.school.billingCycle) }}</dd>
+          </div>
+          <div class="row">
+            <dt>Renews on</dt>
+            <dd>{{ dateLabel(data.school.renewalAt) }}</dd>
+          </div>
+          <div class="row">
+            <dt>Trial ends</dt>
+            <dd>{{ dateLabel(data.school.trialEndsAt) }}</dd>
+          </div>
+          <div class="row">
+            <dt>Price</dt>
+            <dd>{{ priceLabel(data.school.priceOverride) }}</dd>
+          </div>
+          <div class="row">
+            <dt>Created</dt>
+            <dd>{{ dateLabel(data.school.createdAt) }}</dd>
+          </div>
+          <div class="row">
+            <dt>Last updated</dt>
+            <dd>{{ dateLabel(data.school.updatedAt) }}</dd>
+          </div>
+        </dl>
+
+        @if (canManage()) {
+          <div class="billing-actions">
+            <button
+              type="button"
+              class="btn-ghost btn-ghost--sm"
+              data-action="renew-month"
+              [disabled]="renewing() !== null"
+              (click)="renew('month')"
+            >
+              {{ renewing() === 'month' ? 'Renewing…' : 'Renew +1 month' }}
+            </button>
+            <button
+              type="button"
+              class="btn-ghost btn-ghost--sm"
+              data-action="renew-year"
+              [disabled]="renewing() !== null"
+              (click)="renew('year')"
+            >
+              {{ renewing() === 'year' ? 'Renewing…' : 'Renew +1 year' }}
+            </button>
+          </div>
+        }
+
+        @if (canManage() && billingOpen()) {
+          <form
+            class="billing-form"
+            [formGroup]="billingForm"
+            (ngSubmit)="saveBilling()"
+            novalidate
+          >
+            <div class="field-grid">
+              <label class="b-field">
+                <span class="b-field__label">Plan</span>
+                <select class="b-field__input" formControlName="plan">
+                  @if (planOptions().length === 0) {
+                    <option [value]="billingForm.controls.plan.value">
+                      {{ data.school.planName }}
+                    </option>
+                  }
+                  @for (option of planOptions(); track option.code) {
+                    <option [value]="option.code">{{ option.name }}</option>
+                  }
+                </select>
+              </label>
+
+              <label class="b-field">
+                <span class="b-field__label">Subscription</span>
+                <select class="b-field__input" formControlName="subscriptionStatus">
+                  @for (status of subscriptionStatuses; track status) {
+                    <option [value]="status">{{ subscriptionLabel(status) }}</option>
+                  }
+                </select>
+              </label>
+
+              <label class="b-field">
+                <span class="b-field__label">Billing cycle</span>
+                <select class="b-field__input" formControlName="billingCycle">
+                  @for (cycle of billingCycles; track cycle) {
+                    <option [value]="cycle">{{ billingCycleLabel(cycle) }}</option>
+                  }
+                </select>
+              </label>
+
+              <label class="b-field">
+                <span class="b-field__label">Price override (₹ / month)</span>
+                <input
+                  class="b-field__input"
+                  type="number"
+                  min="0"
+                  step="1"
+                  formControlName="priceOverride"
+                  placeholder="Empty = plan price"
+                />
+              </label>
+
+              <label class="b-field">
+                <span class="b-field__label">Renews on</span>
+                <input class="b-field__input" type="date" formControlName="renewalAt" />
+              </label>
+
+              <label class="b-field">
+                <span class="b-field__label">Trial ends</span>
+                <input class="b-field__input" type="date" formControlName="trialEndsAt" />
+              </label>
+            </div>
+
+            <div class="billing-form__actions">
+              <button type="submit" class="btn-primary" [disabled]="billingSubmitting()">
+                @if (billingSubmitting()) {
+                  <span class="spinner" aria-hidden="true"></span>
+                  Saving&hellip;
+                } @else {
+                  <app-icon name="check" />
+                  Save billing
+                }
+              </button>
+              <button type="button" class="btn-ghost" (click)="closeBilling()">Cancel</button>
+            </div>
+          </form>
+        }
+      </article>
+    </section>
+
+    <section class="card users">
+      <header class="panel__head">
+        <h2>Recent users</h2>
+        <span class="muted">{{ data.stats.totalUsers }} total</span>
+      </header>
+      @if (recentUsers().length > 0) {
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Setup</th>
+                <th>Last login</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (user of recentUsers(); track user.id) {
+                <tr>
+                  <td>
+                    <span class="name-cell">{{ user.name }}</span>
+                    <span class="sub-cell">{{ user.email }}</span>
+                  </td>
+                  <td>{{ roleLabel(user.role) }}</td>
+                  <td>
+                    <span [class]="'pill pill--' + user.status">{{ user.status }}</span>
+                  </td>
+                  <td>
+                    @if (user.setupPending) {
+                      <span class="pill pill--pending">Pending</span>
+                    } @else {
+                      <span class="pill pill--neutral">Done</span>
+                    }
+                  </td>
+                  <td>{{ dateTimeLabel(user.lastLoginAt) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <div class="state" role="status">
+          <p>No users in this workspace yet.</p>
+        </div>
+      }
+    </section>
+  }
+</section>
