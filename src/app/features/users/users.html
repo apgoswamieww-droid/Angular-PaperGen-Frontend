@@ -1,46 +1,63 @@
 <section class="page">
   <header class="page__head">
     <div>
-      <h1>Users &amp; Roles</h1>
-      <p>Manage who can sign in to your school panel and what they can access.</p>
+      <h1>{{ heading() }}</h1>
+      <p>{{ subtitle() }}</p>
     </div>
-    <a class="btn-primary" routerLink="/users/new" data-testid="add-user">
-      <app-icon name="user-plus" />
-      Add user
-    </a>
+    @if (canManage()) {
+      <div class="page__actions">
+        @if (studentScope()) {
+          <a class="btn-ghost" routerLink="/users/students/import" data-testid="import-students">
+            <app-icon name="upload" />
+            Bulk import
+          </a>
+        }
+        <a
+          class="btn-primary"
+          [routerLink]="['/users/new']"
+          [queryParams]="addUserQuery()"
+          data-testid="add-user"
+        >
+          <app-icon name="user-plus" />
+          {{ addLabel() }}
+        </a>
+      </div>
+    }
   </header>
 
-  @if (summary(); as summary) {
-    <div class="stats">
-      <div class="stat">
-        <span class="stat__value">{{ summary.totalUsers }}</span>
-        <span class="stat__label">Total users</span>
+  @if (!scoped()) {
+    @if (summary(); as summary) {
+      <div class="stats">
+        <div class="stat">
+          <span class="stat__value">{{ summary.totalUsers }}</span>
+          <span class="stat__label">Total users</span>
+        </div>
+        <div class="stat">
+          <span class="stat__value">{{ summary.activeUsers }}</span>
+          <span class="stat__label">Active</span>
+        </div>
+        <div class="stat">
+          <span class="stat__value">{{ summary.suspendedUsers }}</span>
+          <span class="stat__label">Suspended</span>
+        </div>
+        <div class="stat">
+          <span class="stat__value">{{ summary.schoolAdmins }}</span>
+          <span class="stat__label">School admins</span>
+        </div>
+        <div class="stat">
+          <span class="stat__value">{{ summary.teachers }}</span>
+          <span class="stat__label">Teachers</span>
+        </div>
+        <div class="stat">
+          <span class="stat__value">{{ summary.staff }}</span>
+          <span class="stat__label">Staff</span>
+        </div>
+        <div class="stat">
+          <span class="stat__value">{{ summary.students }}</span>
+          <span class="stat__label">Students</span>
+        </div>
       </div>
-      <div class="stat">
-        <span class="stat__value">{{ summary.activeUsers }}</span>
-        <span class="stat__label">Active</span>
-      </div>
-      <div class="stat">
-        <span class="stat__value">{{ summary.suspendedUsers }}</span>
-        <span class="stat__label">Suspended</span>
-      </div>
-      <div class="stat">
-        <span class="stat__value">{{ summary.schoolAdmins }}</span>
-        <span class="stat__label">School admins</span>
-      </div>
-      <div class="stat">
-        <span class="stat__value">{{ summary.teachers }}</span>
-        <span class="stat__label">Teachers</span>
-      </div>
-      <div class="stat">
-        <span class="stat__value">{{ summary.staff }}</span>
-        <span class="stat__label">Staff</span>
-      </div>
-      <div class="stat">
-        <span class="stat__value">{{ summary.students }}</span>
-        <span class="stat__label">Students</span>
-      </div>
-    </div>
+    }
   }
 
   <section class="card">
@@ -99,18 +116,20 @@
         />
       </label>
 
-      <label class="select">
-        <span class="sr-only">Filter by role</span>
-        <select
-          data-testid="role-filter"
-          [value]="roleFilter()"
-          (change)="setRole($any($event.target).value)"
-        >
-          @for (role of roles; track role) {
-            <option [value]="role">{{ roleLabel(role) }}</option>
-          }
-        </select>
-      </label>
+      @if (!scoped()) {
+        <label class="select">
+          <span class="sr-only">Filter by role</span>
+          <select
+            data-testid="role-filter"
+            [value]="roleFilter()"
+            (change)="setRole($any($event.target).value)"
+          >
+            @for (role of roles(); track role) {
+              <option [value]="role">{{ roleLabel(role) }}</option>
+            }
+          </select>
+        </label>
+      }
 
       <div class="filters" role="group" aria-label="Filter by status">
         @for (status of statuses; track status) {
@@ -177,7 +196,9 @@
                   }
                 </button>
               </th>
-              <th aria-label="Actions"></th>
+              @if (canManage()) {
+                <th aria-label="Actions"></th>
+              }
             </tr>
           </thead>
           <tbody>
@@ -198,68 +219,71 @@
                 </td>
                 <td>{{ idLabel(user.lastLoginAt) }}</td>
                 <td>{{ idLabel(user.createdAt) }}</td>
-                <td class="row-actions">
-                  @if (confirmId() === user.id) {
-                    <span class="confirm">
-                      <span class="confirm__text">Delete {{ user.name }}?</span>
-                      <button
-                        type="button"
-                        class="btn-ghost btn-ghost--danger"
-                        [disabled]="busyId() === user.id"
-                        data-action="confirm-delete"
-                        (click)="confirmDelete(user)"
+                @if (canManage()) {
+                  <td class="row-actions">
+                    @if (confirmId() === user.id) {
+                      <span class="confirm">
+                        <span class="confirm__text">Delete {{ user.name }}?</span>
+                        <button
+                          type="button"
+                          class="btn-ghost btn-ghost--danger"
+                          [disabled]="busyId() === user.id"
+                          data-action="confirm-delete"
+                          (click)="confirmDelete(user)"
+                        >
+                          Confirm
+                        </button>
+                        <button type="button" class="btn-ghost" (click)="cancelDelete()">
+                          Cancel
+                        </button>
+                      </span>
+                    } @else {
+                      <a
+                        class="btn-ghost"
+                        [attr.data-link]="'edit'"
+                        [routerLink]="['/users', user.id, 'edit']"
+                        [queryParams]="{ from: pagePath() }"
                       >
-                        Confirm
-                      </button>
-                      <button type="button" class="btn-ghost" (click)="cancelDelete()">
-                        Cancel
-                      </button>
-                    </span>
-                  } @else {
-                    <a
-                      class="btn-ghost"
-                      [attr.data-link]="'edit'"
-                      [routerLink]="['/users', user.id, 'edit']"
-                    >
-                      Edit
-                    </a>
-                    <button
-                      type="button"
-                      class="btn-ghost"
-                      [disabled]="busyId() === user.id"
-                      data-action="reset-password"
-                      (click)="resetPassword(user)"
-                    >
-                      @if (busyId() === user.id) {
-                        Working&hellip;
-                      } @else {
-                        Reset password
-                      }
-                    </button>
-                    @if (!isSelf(user)) {
+                        Edit
+                      </a>
                       <button
                         type="button"
                         class="btn-ghost"
                         [disabled]="busyId() === user.id"
-                        [attr.data-action]="user.status === 'active' ? 'suspend' : 'activate'"
-                        (click)="toggleStatus(user)"
+                        data-action="reset-password"
+                        (click)="resetPassword(user)"
                       >
-                        {{ user.status === 'active' ? 'Suspend' : 'Activate' }}
+                        @if (busyId() === user.id) {
+                          Working&hellip;
+                        } @else {
+                          Reset password
+                        }
                       </button>
-                      <button
-                        type="button"
-                        class="btn-ghost btn-ghost--danger"
-                        [disabled]="busyId() === user.id"
-                        data-action="delete"
-                        (click)="requestDelete(user)"
-                      >
-                        Delete
-                      </button>
-                    } @else {
-                      <span class="self-tag">You</span>
+                      @if (!isSelf(user)) {
+                        <button
+                          type="button"
+                          class="btn-ghost"
+                          [disabled]="busyId() === user.id"
+                          [attr.data-action]="user.status === 'active' ? 'suspend' : 'activate'"
+                          (click)="toggleStatus(user)"
+                        >
+                          {{ user.status === 'active' ? 'Suspend' : 'Activate' }}
+                        </button>
+                        <button
+                          type="button"
+                          class="btn-ghost btn-ghost--danger"
+                          [disabled]="busyId() === user.id"
+                          data-action="delete"
+                          (click)="requestDelete(user)"
+                        >
+                          Delete
+                        </button>
+                      } @else {
+                        <span class="self-tag">You</span>
+                      }
                     }
-                  }
-                </td>
+                  </td>
+                }
               </tr>
             }
           </tbody>

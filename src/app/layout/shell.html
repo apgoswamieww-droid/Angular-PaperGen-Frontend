@@ -105,12 +105,10 @@
         @for (item of section.items; track item.path) {
           @if (item.children; as children) {
             <div class="nav-group" [class.is-open]="isGroupOpen(item)">
-              <a
+              <button
+                type="button"
                 class="nav-item nav-group__head"
-                [routerLink]="item.path"
-                routerLinkActive="is-active"
-                [routerLinkActiveOptions]="{ exact: true }"
-                ariaCurrentWhenActive="page"
+                [class.is-active]="isGroupActive(item)"
                 [attr.title]="item.label"
                 [attr.aria-expanded]="isGroupOpen(item)"
                 data-testid="nav-group-head"
@@ -119,7 +117,7 @@
                 <app-icon [name]="item.icon" />
                 <span class="nav-item__label">{{ item.label }}</span>
                 <app-icon name="chevron-down" class="nav-group__chevron" />
-              </a>
+              </button>
               @if (isGroupOpen(item)) {
                 <div class="nav-group__children">
                   @for (child of children; track child.path) {

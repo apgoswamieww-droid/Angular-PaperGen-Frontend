@@ -4,7 +4,8 @@ import {
   adminGuestGuard,
   authGuard,
   guestGuard,
-  schoolAdminGuard,
+  passwordExpiredGuard,
+  permissionGuard,
 } from './core/auth/auth.guard';
 
 export const routes: Routes = [
@@ -159,6 +160,7 @@ export const routes: Routes = [
   {
     path: '',
     canActivate: [authGuard],
+    canActivateChild: [passwordExpiredGuard],
     loadComponent: () => import('./layout/shell').then((m) => m.Shell),
     children: [
       {
@@ -169,24 +171,58 @@ export const routes: Routes = [
       {
         path: 'users/new',
         title: 'Add user · Paper Generator',
-        canActivate: [schoolAdminGuard],
+        canActivate: [permissionGuard('users.manage')],
         loadComponent: () => import('./features/users/user-form').then((m) => m.UserForm),
       },
       {
         path: 'users/:id/edit',
         title: 'Edit user · Paper Generator',
-        canActivate: [schoolAdminGuard],
+        canActivate: [permissionGuard('users.manage')],
         loadComponent: () => import('./features/users/user-form').then((m) => m.UserForm),
       },
       {
         path: 'users',
-        title: 'Users & Roles · Paper Generator',
-        canActivate: [schoolAdminGuard],
+        title: 'Users · Paper Generator',
+        canActivate: [permissionGuard('users.view')],
         loadComponent: () => import('./features/users/users').then((m) => m.Users),
+      },
+      {
+        path: 'users/teachers',
+        title: 'Teachers · Paper Generator',
+        canActivate: [permissionGuard('users.view')],
+        data: { role: 'teacher', pageTitle: 'Teachers', pagePath: '/users/teachers' },
+        loadComponent: () => import('./features/users/users').then((m) => m.Users),
+      },
+      {
+        path: 'users/students/import',
+        title: 'Import students · Paper Generator',
+        canActivate: [permissionGuard('users.manage')],
+        loadComponent: () => import('./features/users/student-import').then((m) => m.StudentImport),
+      },
+      {
+        path: 'users/students',
+        title: 'Students · Paper Generator',
+        canActivate: [permissionGuard('users.view')],
+        data: { role: 'student', pageTitle: 'Students', pagePath: '/users/students' },
+        loadComponent: () => import('./features/users/users').then((m) => m.Users),
+      },
+      {
+        path: 'users/staff',
+        title: 'Staff · Paper Generator',
+        canActivate: [permissionGuard('users.view')],
+        data: { role: 'staff', pageTitle: 'Staff', pagePath: '/users/staff' },
+        loadComponent: () => import('./features/users/users').then((m) => m.Users),
+      },
+      {
+        path: 'roles',
+        title: 'Roles & permissions · Paper Generator',
+        canActivate: [permissionGuard('roles.view')],
+        loadComponent: () => import('./features/roles/roles').then((m) => m.Roles),
       },
       {
         path: 'subjects',
         title: 'Subjects & Chapters · Paper Generator',
+        canActivate: [permissionGuard('masters.view')],
         loadComponent: () =>
           import('./features/placeholder/placeholder').then((m) => m.Placeholder),
         data: {
@@ -196,19 +232,36 @@ export const routes: Routes = [
         },
       },
       {
-        path: 'questions',
-        title: 'Question Bank · Paper Generator',
+        path: 'questions/new',
+        title: 'Add question - Paper Generator',
+        canActivate: [permissionGuard('questions.manage')],
         loadComponent: () =>
-          import('./features/placeholder/placeholder').then((m) => m.Placeholder),
-        data: {
-          title: 'Question Bank',
-          description: 'Curate questions by chapter, type, difficulty and marks.',
-          icon: 'help-circle',
-        },
+          import('./features/questions/question-form').then((m) => m.QuestionForm),
+      },
+      {
+        path: 'questions/:id/edit',
+        title: 'Edit question - Paper Generator',
+        canActivate: [permissionGuard('questions.manage')],
+        loadComponent: () =>
+          import('./features/questions/question-form').then((m) => m.QuestionForm),
+      },
+      {
+        path: 'questions/:id',
+        title: 'Question details - Paper Generator',
+        canActivate: [permissionGuard('questions.view')],
+        loadComponent: () =>
+          import('./features/questions/question-detail').then((m) => m.QuestionDetail),
+      },
+      {
+        path: 'questions',
+        title: 'Question Bank - Paper Generator',
+        canActivate: [permissionGuard('questions.view')],
+        loadComponent: () => import('./features/questions/questions').then((m) => m.Questions),
       },
       {
         path: 'blueprints',
         title: 'Blueprints · Paper Generator',
+        canActivate: [permissionGuard('blueprints.view')],
         loadComponent: () =>
           import('./features/placeholder/placeholder').then((m) => m.Placeholder),
         data: {
@@ -220,6 +273,7 @@ export const routes: Routes = [
       {
         path: 'papers/generate',
         title: 'Generate Paper · Paper Generator',
+        canActivate: [permissionGuard('papers.manage')],
         loadComponent: () =>
           import('./features/placeholder/placeholder').then((m) => m.Placeholder),
         data: {
@@ -231,6 +285,7 @@ export const routes: Routes = [
       {
         path: 'papers',
         title: 'My Papers · Paper Generator',
+        canActivate: [permissionGuard('papers.view')],
         loadComponent: () =>
           import('./features/placeholder/placeholder').then((m) => m.Placeholder),
         data: {
@@ -242,93 +297,81 @@ export const routes: Routes = [
       {
         path: 'reports/class-students',
         title: 'Class & Student report · Paper Generator',
+        canActivate: [permissionGuard('reports.view')],
         loadComponent: () =>
           import('./features/reports/class-student-report').then((m) => m.ClassStudentReport),
       },
       {
         path: 'reports',
         title: 'Reports · Paper Generator',
+        canActivate: [permissionGuard('reports.view')],
         loadComponent: () => import('./features/reports/reports').then((m) => m.Reports),
       },
       {
         path: 'masters/mediums',
         title: 'Mediums · Paper Generator',
+        canActivate: [permissionGuard('masters.view')],
         loadComponent: () => import('./features/masters/mediums/mediums').then((m) => m.Mediums),
       },
       {
         path: 'masters/standards',
         title: 'Standards · Paper Generator',
+        canActivate: [permissionGuard('masters.view')],
         loadComponent: () =>
           import('./features/masters/standards/standards').then((m) => m.Standards),
       },
       {
         path: 'masters/subjects',
         title: 'Subjects · Paper Generator',
-        loadComponent: () => import('./features/masters/master-page').then((m) => m.MasterPage),
-        data: {
-          title: 'Subjects',
-          description:
-            'Manage subjects and map each one to the standards and mediums it is taught in.',
-          icon: 'grid',
-        },
+        canActivate: [permissionGuard('masters.view')],
+        loadComponent: () => import('./features/masters/subjects/subjects').then((m) => m.Subjects),
       },
       {
         path: 'masters/chapters',
         title: 'Chapters · Paper Generator',
-        loadComponent: () => import('./features/masters/master-page').then((m) => m.MasterPage),
-        data: {
-          title: 'Chapters',
-          description: 'Map syllabus chapters to subjects so questions and papers stay organised.',
-          icon: 'file-text',
-        },
+        canActivate: [permissionGuard('masters.view')],
+        loadComponent: () => import('./features/masters/chapters/chapters').then((m) => m.Chapters),
       },
       {
         path: 'masters/topics',
         title: 'Topics · Paper Generator',
-        loadComponent: () => import('./features/masters/master-page').then((m) => m.MasterPage),
-        data: {
-          title: 'Topics',
-          description:
-            'Break chapters into tagged topics used for question mapping and paper blueprints.',
-          icon: 'list',
-        },
+        canActivate: [permissionGuard('masters.view')],
+        loadComponent: () => import('./features/masters/topics/topics').then((m) => m.Topics),
       },
       {
         path: 'masters/question-types',
         title: 'Question Types · Paper Generator',
-        loadComponent: () => import('./features/masters/master-page').then((m) => m.MasterPage),
-        data: {
-          title: 'Question Types',
-          description:
-            'Define question formats such as MCQ, fill in the blanks, short and long answer.',
-          icon: 'help-circle',
-        },
+        canActivate: [permissionGuard('masters.view')],
+        loadComponent: () =>
+          import('./features/masters/question-types/question-types').then((m) => m.QuestionTypes),
       },
       {
         path: 'masters/difficulty-levels',
         title: 'Difficulty Levels · Paper Generator',
-        loadComponent: () => import('./features/masters/master-page').then((m) => m.MasterPage),
-        data: {
-          title: 'Difficulty Levels',
-          description:
-            'Maintain difficulty levels used to balance papers during generation — easy, medium and hard.',
-          icon: 'chart',
-        },
+        canActivate: [permissionGuard('masters.view')],
+        loadComponent: () =>
+          import('./features/masters/difficulty-levels/difficulty-levels').then(
+            (m) => m.DifficultyLevels,
+          ),
       },
       {
         path: 'masters/bloom-levels',
-        title: 'Bloom Levels · Paper Generator',
-        loadComponent: () => import('./features/masters/master-page').then((m) => m.MasterPage),
-        data: {
-          title: 'Bloom Levels',
-          description:
-            "Maintain Bloom's taxonomy levels so every generated paper covers cognitive stages.",
-          icon: 'target',
-        },
+        title: 'Bloom Levels — Paper Generator',
+        canActivate: [permissionGuard('masters.view')],
+        loadComponent: () =>
+          import('./features/masters/bloom-levels/bloom-levels').then((m) => m.BloomLevels),
+      },
+      {
+        path: 'masters/exam-types',
+        title: 'Exam Types — Paper Generator',
+        canActivate: [permissionGuard('masters.view')],
+        loadComponent: () =>
+          import('./features/masters/exam-types/exam-types').then((m) => m.ExamTypes),
       },
       {
         path: 'masters',
         title: 'Masters · Paper Generator',
+        canActivate: [permissionGuard('masters.view')],
         loadComponent: () => import('./features/masters/masters').then((m) => m.Masters),
       },
       {
@@ -345,13 +388,7 @@ export const routes: Routes = [
       {
         path: 'settings',
         title: 'Settings · Paper Generator',
-        loadComponent: () =>
-          import('./features/placeholder/placeholder').then((m) => m.Placeholder),
-        data: {
-          title: 'Settings',
-          description: 'School profile, branding and account preferences.',
-          icon: 'settings',
-        },
+        loadComponent: () => import('./features/settings/settings').then((m) => m.Settings),
       },
     ],
   },

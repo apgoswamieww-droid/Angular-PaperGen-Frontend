@@ -61,7 +61,7 @@ export class Mediums {
   protected readonly saving = signal(false);
   protected readonly formError = signal<string | null>(null);
 
-  protected readonly canManage = computed(() => this.auth.user()?.role === 'school_admin');
+  protected readonly canManage = computed(() => this.auth.can('masters.manage'));
   protected readonly editing = computed(() => this.editingId() !== null);
   protected readonly rows = computed(() => this.result()?.items ?? []);
   protected readonly summary = computed(() => this.result()?.summary ?? null);

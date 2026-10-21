@@ -118,6 +118,16 @@ describe('Login', () => {
     expect(navigateSpy).toHaveBeenCalledWith('/dashboard');
   });
 
+  it('sends users with an expired password to settings after sign-in', () => {
+    vi.spyOn(auth, 'login').mockReturnValue(of({ ...USER, passwordExpired: true }));
+    const navigateSpy = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
+
+    fillValidCredentials();
+    submit();
+
+    expect(navigateSpy).toHaveBeenCalledWith('/settings');
+  });
+
   it('shows the error message returned by the API', () => {
     vi.spyOn(auth, 'login').mockReturnValue(
       throwError(() => ({

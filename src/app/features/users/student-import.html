@@ -1,0 +1,169 @@
+<section class="page">
+  <nav class="crumbs">
+    <a routerLink="/users/students">
+      <app-icon name="arrow-right" class="crumbs__arrow" />
+      Back to students
+    </a>
+  </nav>
+
+  <header class="page__head">
+    <div>
+      <h1>Bulk import students</h1>
+      <p>
+        Upload an Excel or CSV file to create student logins in one go. Each row becomes an account
+        with a generated password.
+      </p>
+    </div>
+  </header>
+
+  @if (error(); as error) {
+    <p class="alert" role="alert" data-testid="import-error">
+      <app-icon name="alert-circle" />
+      {{ error }}
+    </p>
+  }
+
+  <section class="card steps">
+    <div class="step">
+      <span class="step__number">1</span>
+      <div class="step__body">
+        <h2>Download the template</h2>
+        <p>
+          Use the template so column names match. Subjects, standards and mediums must already exist
+          under Masters.
+        </p>
+        <button
+          type="button"
+          class="btn-ghost"
+          [disabled]="templateLoading()"
+          data-testid="download-template"
+          (click)="downloadTemplate()"
+        >
+          <app-icon name="download" />
+          {{ templateLoading() ? 'Preparing…' : 'Download Excel template' }}
+        </button>
+      </div>
+    </div>
+
+    <div class="step">
+      <span class="step__number">2</span>
+      <div class="step__body">
+        <h2>Choose your file</h2>
+        <p>
+          Up to 100 student rows per file. Emails are optional, but must be unique when present.
+        </p>
+        <label class="file">
+          <input
+            type="file"
+            accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
+            data-testid="csv-input"
+            (change)="onFile($event)"
+          />
+          <span class="file__button">
+            <app-icon name="upload" />
+            Choose Excel or CSV
+          </span>
+          <span class="file__name">{{ fileName() || 'No file chosen' }}</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="step">
+      <span class="step__number">3</span>
+      <div class="step__body">
+        <h2>Import students</h2>
+        <p>
+          Valid rows are created immediately. Invalid rows are reported below and can be fixed in
+          the file and re-imported.
+        </p>
+        <button
+          type="button"
+          class="btn-primary"
+          [disabled]="submitting() || csv().trim() === ''"
+          data-testid="start-import"
+          (click)="startImport()"
+        >
+          <app-icon name="user-plus" />
+          @if (submitting()) {
+            Importing&hellip;
+          } @else {
+            Import students
+          }
+        </button>
+      </div>
+    </div>
+  </section>
+
+  @if (result(); as result) {
+    <section class="card summary" data-testid="import-result">
+      <header class="summary__head">
+        <div>
+          <h2>Import finished</h2>
+          <p>
+            {{ result.created }} of {{ result.total }} rows created.
+            @if (result.failed > 0) {
+              {{ result.failed }} failed.
+            }
+          </p>
+        </div>
+        @if (createdRows().length > 0) {
+          <button
+            type="button"
+            class="btn-ghost"
+            data-testid="download-credentials"
+            (click)="downloadCredentials()"
+          >
+            <app-icon name="download" />
+            Download credentials
+          </button>
+        }
+      </header>
+
+      @if (createdRows().length > 0) {
+        <p class="summary__note">
+          Passwords are shown only once. Download them now and share them with each student.
+        </p>
+      }
+
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Row</th>
+              <th>Student</th>
+              <th>Email</th>
+              <th>Status</th>
+              <th>Password</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of result.results; track row.row) {
+              <tr [attr.data-row]="row.row" [attr.data-status]="row.status">
+                <td>{{ row.row }}</td>
+                <td>{{ row.name || '—' }}</td>
+                <td>{{ row.email || '—' }}</td>
+                <td>
+                  <span [class]="'pill pill--' + row.status">{{ row.status }}</span>
+                  @if (row.error) {
+                    <span class="row-error">{{ row.error }}</span>
+                  }
+                </td>
+                <td>
+                  @if (row.password) {
+                    <code class="password">{{ row.password }}</code>
+                  } @else {
+                    —
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <a class="btn-primary" routerLink="/users/students" data-testid="back-to-students">
+        Back to students
+      </a>
+    </section>
+  }
+</section>

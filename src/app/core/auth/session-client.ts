@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { computed, signal } from '@angular/core';
 import { catchError, finalize, map, of, shareReplay, tap, type Observable } from 'rxjs';
 import type {
+  ChangePasswordRequest,
   Credentials,
   ForgotPasswordResponse,
   ResetPasswordRequest,
@@ -80,6 +81,21 @@ export class SessionClient {
 
   resetPassword(payload: ResetPasswordRequest): Observable<void> {
     return this.http.post<void>(`${this.basePath}/reset-password`, payload);
+  }
+
+  /**
+   * Rotates the signed-in user's password. The API revokes every other
+   * session and returns a fresh one for the current browser.
+   */
+  changePassword(payload: ChangePasswordRequest): Observable<SessionUser> {
+    return this.http
+      .post<SessionResponse>(`${this.basePath}/change-password`, payload, {
+        withCredentials: true,
+      })
+      .pipe(
+        tap((response) => this.applySession(response)),
+        map((response) => response.user),
+      );
   }
 
   clear(): void {

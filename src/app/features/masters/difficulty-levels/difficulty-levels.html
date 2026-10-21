@@ -1,0 +1,362 @@
+<section class="page">
+  <header class="page__head">
+    <div>
+      <a class="back-link" routerLink="/masters" data-testid="back-to-masters">
+        <app-icon name="arrow-right" />
+        All masters
+      </a>
+      <h1>Difficulty Levels</h1>
+      <p>
+        Maintain difficulty levels used to balance papers during generation — easy, medium and hard.
+      </p>
+    </div>
+    @if (canManage()) {
+      <button
+        type="button"
+        class="btn-primary"
+        data-testid="add-difficulty-level"
+        (click)="openCreate()"
+      >
+        <app-icon name="plus" />
+        Add difficulty level
+      </button>
+    }
+  </header>
+
+  @if (summary(); as summary) {
+    <div class="stats">
+      <div class="stat">
+        <span class="stat__value">{{ summary.active }}</span>
+        <span class="stat__label">Active</span>
+      </div>
+      <div class="stat">
+        <span class="stat__value">{{ summary.inactive }}</span>
+        <span class="stat__label">Inactive</span>
+      </div>
+      <div class="stat">
+        <span class="stat__value">{{ summary.deleted }}</span>
+        <span class="stat__label">Deleted</span>
+      </div>
+    </div>
+  }
+
+  <section class="card">
+    @if (notice(); as notice) {
+      <p class="action-notice action-notice--success" role="status" data-testid="notice">
+        <app-icon name="check" />
+        <span class="notice-body">{{ notice }}</span>
+        <button type="button" class="notice-dismiss" (click)="dismissNotice()">
+          <app-icon name="x" />
+          <span class="sr-only">Dismiss</span>
+        </button>
+      </p>
+    }
+
+    @if (actionError(); as actionError) {
+      <p class="action-error" role="alert" data-testid="action-error">
+        <app-icon name="alert-circle" />
+        {{ actionError }}
+      </p>
+    }
+
+    @if (formOpen()) {
+      <form
+        class="inline-form"
+        [formGroup]="form"
+        (ngSubmit)="submit()"
+        data-testid="difficulty-level-form"
+      >
+        <h2>{{ editing() ? 'Edit difficulty level' : 'New difficulty level' }}</h2>
+        <div class="inline-form__fields">
+          <label class="field field--grow">
+            <span class="field__label">Name</span>
+            <input
+              type="text"
+              formControlName="name"
+              placeholder="e.g. Easy"
+              maxlength="60"
+              autocomplete="off"
+              data-testid="difficulty-level-name"
+            />
+            @if (nameError(); as error) {
+              <span class="field__error" data-testid="name-error">{{ error }}</span>
+            }
+          </label>
+          <label class="field field--narrow">
+            <span class="field__label">Order</span>
+            <input
+              type="number"
+              formControlName="order"
+              min="1"
+              max="100"
+              step="1"
+              inputmode="numeric"
+              data-testid="difficulty-level-order"
+            />
+            @if (orderError(); as error) {
+              <span class="field__error" data-testid="order-error">{{ error }}</span>
+            }
+          </label>
+          <label class="field field--compact">
+            <span class="field__label">Status</span>
+            <select formControlName="status" data-testid="difficulty-level-status">
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </label>
+        </div>
+
+        @if (formError(); as formError) {
+          <p class="form-error" role="alert" data-testid="form-error">{{ formError }}</p>
+        }
+
+        <div class="inline-form__actions">
+          <button
+            type="submit"
+            class="btn-primary"
+            [disabled]="saving()"
+            data-testid="save-difficulty-level"
+          >
+            {{ saving() ? 'Saving…' : editing() ? 'Save changes' : 'Add difficulty level' }}
+          </button>
+          @if (!editing()) {
+            <button
+              type="button"
+              class="btn-ghost"
+              [disabled]="saving()"
+              data-testid="save-and-new-difficulty-level"
+              (click)="submitAndNew()"
+            >
+              Save &amp; new
+            </button>
+          }
+          <button type="button" class="btn-ghost" [disabled]="saving()" (click)="closeForm()">
+            Cancel
+          </button>
+        </div>
+      </form>
+    }
+
+    <div class="toolbar">
+      <label class="search">
+        <app-icon name="search" />
+        <input
+          type="search"
+          data-testid="difficulty-level-search"
+          placeholder="Search difficulty levels&hellip;"
+          aria-label="Search difficulty levels"
+          [value]="query()"
+          (input)="onSearch($any($event.target).value)"
+        />
+      </label>
+
+      <div class="filters" role="group" aria-label="Filter by status">
+        @for (status of statuses; track status) {
+          <button
+            type="button"
+            class="filter-chip"
+            [class.is-active]="statusFilter() === status"
+            [attr.data-status]="status"
+            [attr.aria-pressed]="statusFilter() === status"
+            (click)="setStatus(status)"
+          >
+            {{ status }}
+          </button>
+        }
+      </div>
+
+      <label class="toggle">
+        <input
+          type="checkbox"
+          data-testid="show-deleted"
+          [checked]="includeDeleted()"
+          (change)="toggleDeleted($any($event.target).checked)"
+        />
+        <span>Show deleted</span>
+      </label>
+    </div>
+
+    @if (loading()) {
+      <div class="state" role="status">
+        <span class="spinner" aria-hidden="true"></span>
+        <p>Loading difficulty levels&hellip;</p>
+      </div>
+    } @else if (error(); as error) {
+      <div class="state state--error" role="alert">
+        <app-icon name="alert-circle" />
+        <p>{{ error }}</p>
+        <button type="button" class="btn-ghost" (click)="load()">Try again</button>
+      </div>
+    } @else if (rows().length > 0) {
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>
+                <button type="button" class="th-sort" data-sort="name" (click)="sortBy('name')">
+                  Name
+                  @if (sort() === 'name') {
+                    <app-icon
+                      name="chevron-down"
+                      class="th-sort__icon"
+                      [class.is-asc]="dir() === 'asc'"
+                    />
+                  }
+                </button>
+              </th>
+              <th>Status</th>
+              <th>
+                <button type="button" class="th-sort" data-sort="order" (click)="sortBy('order')">
+                  Order
+                  @if (sort() === 'order') {
+                    <app-icon
+                      name="chevron-down"
+                      class="th-sort__icon"
+                      [class.is-asc]="dir() === 'asc'"
+                    />
+                  }
+                </button>
+              </th>
+              <th aria-label="Actions"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (difficultyLevel of rows(); track difficultyLevel.id) {
+              <tr
+                [attr.data-difficulty-level]="difficultyLevel.name"
+                [class.is-deleted]="difficultyLevel.deletedAt !== null"
+              >
+                <td>
+                  <span class="name-cell">{{ difficultyLevel.name }}</span>
+                </td>
+                <td>
+                  <span [class]="'pill pill--' + difficultyLevel.status">{{
+                    difficultyLevel.status
+                  }}</span>
+                </td>
+                <td>{{ difficultyLevel.order }}</td>
+                <td class="row-actions">
+                  @if (difficultyLevel.deletedAt !== null) {
+                    @if (canManage()) {
+                      <button
+                        type="button"
+                        class="btn-ghost"
+                        [disabled]="busyId() === difficultyLevel.id"
+                        data-action="restore"
+                        (click)="restore(difficultyLevel)"
+                      >
+                        @if (busyId() === difficultyLevel.id) {
+                          Working&hellip;
+                        } @else {
+                          Restore
+                        }
+                      </button>
+                    } @else {
+                      <span class="deleted-tag">Deleted</span>
+                    }
+                  } @else if (canManage()) {
+                    @if (confirmId() === difficultyLevel.id) {
+                      <span class="confirm">
+                        <span class="confirm__text">Delete {{ difficultyLevel.name }}?</span>
+                        <button
+                          type="button"
+                          class="btn-ghost btn-ghost--danger"
+                          [disabled]="busyId() === difficultyLevel.id"
+                          data-action="confirm-delete"
+                          (click)="confirmDelete(difficultyLevel)"
+                        >
+                          Confirm
+                        </button>
+                        <button type="button" class="btn-ghost" (click)="cancelDelete()">
+                          Cancel
+                        </button>
+                      </span>
+                    } @else {
+                      <button
+                        type="button"
+                        class="btn-ghost"
+                        data-action="edit"
+                        (click)="openEdit(difficultyLevel)"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        class="btn-ghost"
+                        [disabled]="busyId() === difficultyLevel.id"
+                        [attr.data-action]="
+                          difficultyLevel.status === 'active' ? 'deactivate' : 'activate'
+                        "
+                        (click)="toggleStatus(difficultyLevel)"
+                      >
+                        {{ difficultyLevel.status === 'active' ? 'Deactivate' : 'Activate' }}
+                      </button>
+                      <button
+                        type="button"
+                        class="btn-ghost btn-ghost--danger"
+                        [disabled]="busyId() === difficultyLevel.id"
+                        data-action="delete"
+                        (click)="requestDelete(difficultyLevel)"
+                      >
+                        Delete
+                      </button>
+                    }
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <footer class="pager">
+        <p class="pager__range">
+          Showing {{ rangeStart() }}–{{ rangeEnd() }} of {{ total() }} difficulty levels
+        </p>
+        <label class="select select--compact">
+          <span class="sr-only">Rows per page</span>
+          <select
+            data-testid="page-size"
+            [value]="pageSize()"
+            (change)="setPageSize($any($event.target).value)"
+          >
+            @for (size of pageSizes; track size) {
+              <option [value]="size">{{ size }} / page</option>
+            }
+          </select>
+        </label>
+        <div class="pager__buttons">
+          <button
+            type="button"
+            class="btn-ghost"
+            data-action="prev-page"
+            [disabled]="page() <= 1"
+            (click)="goToPage(page() - 1)"
+          >
+            Previous
+          </button>
+          <span class="pager__page">Page {{ page() }} of {{ pageCount() }}</span>
+          <button
+            type="button"
+            class="btn-ghost"
+            data-action="next-page"
+            [disabled]="page() >= pageCount()"
+            (click)="goToPage(page() + 1)"
+          >
+            Next
+          </button>
+        </div>
+      </footer>
+    } @else if (hasFilters()) {
+      <div class="empty">
+        <app-icon name="search" />
+        <p>No difficulty levels match your filters.</p>
+      </div>
+    } @else {
+      <div class="empty">
+        <app-icon name="help-circle" />
+        <p>No difficulty levels yet. Add easy, medium and hard to start balancing papers.</p>
+      </div>
+    }
+  </section>
+</section>

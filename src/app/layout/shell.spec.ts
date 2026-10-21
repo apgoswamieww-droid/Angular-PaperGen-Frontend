@@ -37,6 +37,15 @@ describe('Shell', () => {
       ],
     }).compileComponents();
 
+    const auth = TestBed.inject(AuthService);
+    const httpMock = TestBed.inject(HttpTestingController);
+
+    auth.restore().subscribe();
+    httpMock.expectOne('/api/auth/refresh').flush({
+      accessToken: 'token-default',
+      user: USER,
+    });
+
     fixture = TestBed.createComponent(Shell);
     fixture.detectChanges();
 
@@ -60,7 +69,7 @@ describe('Shell', () => {
   it('renders the header, sidebar navigation and footer', () => {
     expect(element().querySelector('.topbar')).toBeTruthy();
     expect(element().querySelector('.footer')).toBeTruthy();
-    expect(element().querySelectorAll('.nav-item').length).toBe(10);
+    expect(element().querySelectorAll('.nav-item').length).toBe(7);
     expect(element().textContent).toContain('Paper Generator');
     expect(element().textContent).toContain('Question Bank');
     expect(element().textContent).toContain('Reports');
@@ -114,9 +123,9 @@ describe('Shell', () => {
     expect(localStorage.getItem('pg.sidebar')).toBe('expanded');
   });
 
-  it('opens the reports submenu with a single click and collapses it on its page', async () => {
+  it('opens the reports submenu with a single click without navigating', async () => {
     const group = element().querySelector('.nav-group');
-    const head = element().querySelector<HTMLAnchorElement>('[data-testid="nav-group-head"]');
+    const head = element().querySelector<HTMLButtonElement>('[data-testid="nav-group-head"]');
 
     expect(group).toBeTruthy();
     expect(group?.querySelector('.nav-group__children')).toBeNull();
@@ -129,7 +138,7 @@ describe('Shell', () => {
     expect(group?.querySelector('.nav-group__children')?.textContent).toContain('Class & Student');
     expect(head?.getAttribute('aria-expanded')).toBe('true');
     expect(localStorage.getItem('pg.sidebar.groups')).toContain('/reports');
-    expect(router.url).toBe('/reports');
+    expect(router.url).not.toBe('/reports');
 
     head?.click();
     fixture.detectChanges();
@@ -149,23 +158,25 @@ describe('Shell', () => {
     );
   });
 
-  it('keeps the submenu open when clicking reports from a child report', async () => {
+  it('keeps the submenu open when toggling the group from a child report', async () => {
     await router.navigateByUrl('/reports/class-students');
     fixture.detectChanges();
 
-    const head = element().querySelector<HTMLAnchorElement>('[data-testid="nav-group-head"]');
+    const head = element().querySelector<HTMLButtonElement>('[data-testid="nav-group-head"]');
+
+    expect(head?.classList.contains('is-active')).toBe(true);
 
     head?.click();
     fixture.detectChanges();
     await new Promise((resolve) => setTimeout(resolve));
 
-    expect(element().querySelector('.nav-group__children')).not.toBeNull();
-    expect(router.url).toBe('/reports');
+    expect(element().querySelector('.nav-group__children')).toBeNull();
+    expect(router.url).toBe('/reports/class-students');
   });
 
   it('shows every master page in the masters submenu on click', async () => {
     const heads = Array.from(
-      element().querySelectorAll<HTMLAnchorElement>('[data-testid="nav-group-head"]'),
+      element().querySelectorAll<HTMLButtonElement>('[data-testid="nav-group-head"]'),
     );
     const mastersHead = heads.find((head) => head.textContent?.includes('Masters'));
 
@@ -188,8 +199,9 @@ describe('Shell', () => {
       'Question Types',
       'Difficulty Levels',
       'Bloom Levels',
+      'Exam Types',
     ]);
-    expect(router.url).toBe('/masters');
+    expect(router.url).not.toBe('/masters');
   });
 
   it('opens and closes the mobile navigation', () => {
@@ -226,12 +238,13 @@ describe('Shell', () => {
     );
   });
 
-  it('shows the Users link only for school admins', () => {
+  it('shows the Users and Roles links only for permitted roles', () => {
     const auth = TestBed.inject(AuthService);
     const httpMock = TestBed.inject(HttpTestingController);
 
     expect(element().querySelector('.nav-item[href="/users"]')).toBeNull();
-    expect(element().querySelectorAll('.nav-item').length).toBe(10);
+    expect(element().querySelector('.nav-item[href="/roles"]')).toBeNull();
+    expect(element().querySelectorAll('.nav-item').length).toBe(7);
 
     auth.restore().subscribe();
     httpMock.expectOne('/api/auth/refresh').flush({
@@ -245,10 +258,83 @@ describe('Shell', () => {
     });
     fixture.detectChanges();
 
-    const link = element().querySelector<HTMLAnchorElement>('.nav-item[href="/users"]');
+    const usersHead = Array.from(
+      element().querySelectorAll<HTMLButtonElement>('[data-testid="nav-group-head"]'),
+    ).find((head) => head.textContent?.includes('Users'));
+    const rolesLink = element().querySelector<HTMLAnchorElement>('.nav-item[href="/roles"]');
 
-    expect(link?.textContent).toContain('Users');
-    expect(element().querySelectorAll('.nav-item').length).toBe(11);
+    expect(usersHead?.textContent).toContain('Users');
+    expect(rolesLink?.textContent).toContain('Roles');
+    expect(element().querySelectorAll('.nav-item').length).toBe(9);
+  });
+
+  it('opens the Users submenu with the role pages', () => {
+    const auth = TestBed.inject(AuthService);
+    const httpMock = TestBed.inject(HttpTestingController);
+
+    auth.restore().subscribe();
+    httpMock.expectOne('/api/auth/refresh').flush({
+      accessToken: 'token-4',
+      user: {
+        id: 'admin-2',
+        name: 'Asha Deshmukh',
+        email: 'principal@school.edu',
+        role: 'school_admin',
+      },
+    });
+    fixture.detectChanges();
+
+    const usersHead = Array.from(
+      element().querySelectorAll<HTMLButtonElement>('[data-testid="nav-group-head"]'),
+    ).find((head) => head.textContent?.includes('Users'));
+
+    usersHead?.click();
+    fixture.detectChanges();
+
+    const groups = Array.from(element().querySelectorAll('.nav-group'));
+    const usersGroup = groups.find((group) => group.textContent?.includes('Users'));
+    const links = Array.from(
+      usersGroup?.querySelectorAll<HTMLAnchorElement>('.nav-item--child') ?? [],
+    );
+
+    expect(links.map((link) => link.textContent?.trim())).toEqual([
+      'All Users',
+      'Teachers',
+      'Students',
+      'Staff',
+    ]);
+    expect(links.map((link) => link.getAttribute('href'))).toEqual([
+      '/users',
+      '/users/teachers',
+      '/users/students',
+      '/users/staff',
+    ]);
+  });
+
+  it('filters navigation using permissions returned by the server', () => {
+    const auth = TestBed.inject(AuthService);
+    const httpMock = TestBed.inject(HttpTestingController);
+
+    auth.restore().subscribe();
+    httpMock.expectOne('/api/auth/refresh').flush({
+      accessToken: 'token-3',
+      user: {
+        id: 'user-2',
+        name: 'Paper Reviewer',
+        email: 'reviewer@school.edu',
+        role: 'reviewer',
+        permissions: ['papers.view'],
+      },
+    });
+    fixture.detectChanges();
+
+    const labels = Array.from(element().querySelectorAll('.nav-item')).map((item) =>
+      item.textContent?.trim(),
+    );
+
+    expect(labels).toEqual(['Dashboard', 'My Papers']);
+    expect(element().querySelector('.nav-item[href="/users"]')).toBeNull();
+    expect(element().querySelector('.nav-item[href="/roles"]')).toBeNull();
   });
 
   it('signs out from the profile menu', () => {

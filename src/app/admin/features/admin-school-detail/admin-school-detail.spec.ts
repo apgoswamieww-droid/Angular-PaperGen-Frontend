@@ -291,6 +291,80 @@ describe('AdminSchoolDetail', () => {
     expect(banner?.textContent).toContain('72 hours');
   });
 
+  it('seeds the master data and reports the created counts', () => {
+    flushDetail();
+    signIn('super_admin');
+
+    element().querySelector<HTMLButtonElement>('[data-action="seed-master-data"]')?.click();
+    fixture.detectChanges();
+
+    const request = httpMock.expectOne(`${DETAIL_URL}/seed-master-data`);
+    expect(request.request.method).toBe('POST');
+    request.flush({
+      schoolId: 's1',
+      mediums: { created: 2, reused: 0 },
+      standards: { created: 4, reused: 0 },
+      subjects: { created: 28, reused: 0 },
+      chapters: { created: 350, reused: 0 },
+      topics: { created: 1693, reused: 0 },
+      durationMs: 1200,
+    });
+    fixture.detectChanges();
+
+    httpMock.expectOne(DETAIL_URL).flush(DETAIL);
+    fixture.detectChanges();
+
+    const banner = element().querySelector('[data-testid="seed-banner"]');
+    expect(banner?.textContent).toContain('350 chapters');
+    expect(banner?.textContent).toContain('1693 topics created');
+  });
+
+  it('reports when the master data is already up to date', () => {
+    flushDetail();
+    signIn('super_admin');
+
+    element().querySelector<HTMLButtonElement>('[data-action="seed-master-data"]')?.click();
+    fixture.detectChanges();
+
+    httpMock.expectOne(`${DETAIL_URL}/seed-master-data`).flush({
+      schoolId: 's1',
+      mediums: { created: 0, reused: 2 },
+      standards: { created: 0, reused: 4 },
+      subjects: { created: 0, reused: 28 },
+      chapters: { created: 0, reused: 350 },
+      topics: { created: 0, reused: 1693 },
+      durationMs: 900,
+    });
+    fixture.detectChanges();
+
+    httpMock.expectOne(DETAIL_URL).flush(DETAIL);
+    fixture.detectChanges();
+
+    const banner = element().querySelector('[data-testid="seed-banner"]');
+    expect(banner?.textContent).toContain('already up to date');
+    expect(banner?.textContent).toContain('2077 records reused');
+  });
+
+  it('reports a seeding error', () => {
+    flushDetail();
+    signIn('super_admin');
+
+    element().querySelector<HTMLButtonElement>('[data-action="seed-master-data"]')?.click();
+    fixture.detectChanges();
+
+    httpMock
+      .expectOne(`${DETAIL_URL}/seed-master-data`)
+      .flush(
+        { message: 'Master data seeding is already running for this school.' },
+        { status: 409, statusText: 'Conflict' },
+      );
+    fixture.detectChanges();
+
+    const error = element().querySelector('[role="alert"]');
+    expect(error?.textContent).toContain('already running');
+    expect(element().querySelector('[data-testid="seed-banner"]')).toBeNull();
+  });
+
   it('shows the plan and billing summary', () => {
     flushDetail();
 
@@ -405,6 +479,7 @@ describe('AdminSchoolDetail', () => {
     expect(element().querySelector('[data-action="toggle-status"]')).toBeNull();
     expect(element().querySelector('[data-action="resend-invite"]')).toBeNull();
     expect(element().querySelector('[data-action="reset-password"]')).toBeNull();
+    expect(element().querySelector('[data-action="seed-master-data"]')).toBeNull();
     expect(element().querySelector('[data-action="edit-billing"]')).toBeNull();
     expect(element().querySelector('[data-action="renew-month"]')).toBeNull();
     expect(element().querySelector('a[href="/admin/schools/s1/edit"]')).toBeNull();

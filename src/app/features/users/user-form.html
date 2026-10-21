@@ -1,6 +1,6 @@
 <section class="page">
   <nav class="crumbs">
-    <a routerLink="/users">
+    <a [routerLink]="returnPath()">
       <app-icon name="arrow-right" class="crumbs__arrow" />
       Back to users
     </a>
@@ -39,16 +39,18 @@
         @if (credentials.sent) {
           Credentials were emailed to <strong>{{ credentials.email }}</strong
           >.
-        } @else {
+        } @else if (credentials.email !== '') {
           Email delivery failed. Share these credentials with
           <strong>{{ credentials.email }}</strong> yourself.
+        } @else {
+          No email address was provided. Share these credentials with the student yourself.
         }
       </p>
 
       <dl class="credentials__list">
         <div class="credentials__row">
           <dt>Email</dt>
-          <dd data-testid="credentials-email">{{ credentials.email }}</dd>
+          <dd data-testid="credentials-email">{{ credentials.email || 'Not provided' }}</dd>
         </div>
         <div class="credentials__row">
           <dt>Password</dt>
@@ -62,7 +64,7 @@
       </dl>
 
       <div class="credentials__actions">
-        <a class="btn-primary" routerLink="/users" [queryParams]="{ saved: '1' }"> Done </a>
+        <a class="btn-primary" [routerLink]="returnPath()" [queryParams]="{ saved: '1' }"> Done </a>
       </div>
     </section>
   } @else {
@@ -73,8 +75,8 @@
           @if (editing) {
             Update this person&rsquo;s details or role. Changes apply immediately.
           } @else {
-            Create a login for a teacher, staff member or student. We email them a generated
-            password.
+            Create a login for a teacher, staff member or student. We generate a password you can
+            share.
           }
         </p>
       </div>
@@ -91,23 +93,69 @@
       <fieldset class="form__section">
         <legend>Profile</legend>
 
-        <label class="field">
-          <span class="field__label">Full name</span>
-          <input
-            class="field__input"
-            [class.is-invalid]="errorFor('name') !== null"
-            type="text"
-            formControlName="name"
-            autocomplete="name"
-            data-testid="name-input"
-          />
-          @if (errorFor('name'); as message) {
-            <span class="field__error">{{ message }}</span>
-          }
-        </label>
+        @if (isStudent()) {
+          <div class="form__row form__row--3" [formGroup]="student">
+            <label class="field">
+              <span class="field__label">First name</span>
+              <input
+                class="field__input"
+                [class.is-invalid]="studentError('firstName') !== null"
+                type="text"
+                formControlName="firstName"
+                autocomplete="given-name"
+                data-testid="first-name-input"
+              />
+              @if (studentError('firstName'); as message) {
+                <span class="field__error">{{ message }}</span>
+              }
+            </label>
+
+            <label class="field">
+              <span class="field__label">Surname</span>
+              <input
+                class="field__input"
+                type="text"
+                formControlName="surname"
+                autocomplete="family-name"
+                data-testid="surname-input"
+              />
+            </label>
+
+            <label class="field">
+              <span class="field__label">Last name</span>
+              <input
+                class="field__input"
+                type="text"
+                formControlName="lastName"
+                autocomplete="family-name"
+                data-testid="last-name-input"
+              />
+            </label>
+          </div>
+        } @else {
+          <label class="field">
+            <span class="field__label">Full name</span>
+            <input
+              class="field__input"
+              [class.is-invalid]="errorFor('name') !== null"
+              type="text"
+              formControlName="name"
+              autocomplete="name"
+              data-testid="name-input"
+            />
+            @if (errorFor('name'); as message) {
+              <span class="field__error">{{ message }}</span>
+            }
+          </label>
+        }
 
         <label class="field">
-          <span class="field__label">Email address</span>
+          <span class="field__label">
+            Email address
+            @if (isStudent()) {
+              <span class="field__hint">(optional — used for login and emails)</span>
+            }
+          </span>
           <input
             class="field__input"
             [class.is-invalid]="errorFor('email') !== null || emailServerError() !== null"
@@ -142,8 +190,8 @@
           <label class="field">
             <span class="field__label">Role</span>
             <select class="field__input" formControlName="role" data-testid="role-input">
-              @for (option of roleOptions; track option.value) {
-                <option [value]="option.value">{{ option.label }}</option>
+              @for (option of visibleRoleOptions(); track option.key) {
+                <option [value]="option.key">{{ option.name }}</option>
               }
             </select>
             @if (roleLocked()) {
@@ -153,8 +201,244 @@
         </div>
       </fieldset>
 
+      @if (isStudent()) {
+        <fieldset class="form__section form__section--student" [formGroup]="student">
+          <legend>Student details</legend>
+
+          <div class="form__row">
+            <label class="field">
+              <span class="field__label">GR number</span>
+              <input
+                class="field__input"
+                type="text"
+                formControlName="grNumber"
+                maxlength="30"
+                data-testid="gr-input"
+              />
+            </label>
+
+            <label class="field">
+              <span class="field__label">Roll number</span>
+              <input
+                class="field__input"
+                type="text"
+                formControlName="rollNumber"
+                maxlength="30"
+                data-testid="roll-input"
+              />
+            </label>
+          </div>
+
+          <div class="form__row">
+            <label class="field">
+              <span class="field__label">Father&rsquo;s full name</span>
+              <input
+                class="field__input"
+                type="text"
+                formControlName="fatherFullName"
+                data-testid="father-input"
+              />
+            </label>
+
+            <label class="field">
+              <span class="field__label">Mother&rsquo;s full name</span>
+              <input
+                class="field__input"
+                type="text"
+                formControlName="motherFullName"
+                data-testid="mother-input"
+              />
+            </label>
+          </div>
+
+          <div class="form__row">
+            <label class="field">
+              <span class="field__label">Gender</span>
+              <select class="field__input" formControlName="gender" data-testid="gender-input">
+                <option value="">Not specified</option>
+                @for (gender of genders; track gender.value) {
+                  <option [value]="gender.value">{{ gender.label }}</option>
+                }
+              </select>
+            </label>
+
+            <label class="field">
+              <span class="field__label">Date of birth</span>
+              <input
+                class="field__input"
+                type="date"
+                formControlName="dateOfBirth"
+                data-testid="dob-input"
+              />
+            </label>
+          </div>
+
+          <div class="form__row">
+            <label class="field">
+              <span class="field__label">Mobile number</span>
+              <input
+                class="field__input"
+                [class.is-invalid]="studentError('mobile') !== null"
+                type="tel"
+                formControlName="mobile"
+                inputmode="numeric"
+                maxlength="10"
+                data-testid="mobile-input"
+              />
+              @if (studentError('mobile'); as message) {
+                <span class="field__error">{{ message }}</span>
+              }
+            </label>
+
+            <label class="field">
+              <span class="field__label">WhatsApp number</span>
+              <input
+                class="field__input"
+                [class.is-invalid]="studentError('whatsappNumber') !== null"
+                type="tel"
+                formControlName="whatsappNumber"
+                inputmode="numeric"
+                maxlength="10"
+                data-testid="whatsapp-input"
+              />
+              @if (studentError('whatsappNumber'); as message) {
+                <span class="field__error">{{ message }}</span>
+              }
+            </label>
+          </div>
+
+          <div class="form__row">
+            <label class="field">
+              <span class="field__label">Standard</span>
+              <select
+                class="field__input"
+                formControlName="standardId"
+                data-testid="standard-input"
+              >
+                <option value="">Not specified</option>
+                @for (standard of standardOptions(); track standard.id) {
+                  <option [value]="standard.id">{{ standard.name }}</option>
+                }
+              </select>
+              @if (!mastersLoading() && standardOptions().length === 0) {
+                <span class="field__hint">No standards yet — add them under Masters.</span>
+              }
+            </label>
+
+            <label class="field">
+              <span class="field__label">Medium</span>
+              <select class="field__input" formControlName="mediumId" data-testid="medium-input">
+                <option value="">Not specified</option>
+                @for (medium of mediumOptions(); track medium.id) {
+                  <option [value]="medium.id">{{ medium.name }}</option>
+                }
+              </select>
+              @if (!mastersLoading() && mediumOptions().length === 0) {
+                <span class="field__hint">No mediums yet — add them under Masters.</span>
+              }
+            </label>
+          </div>
+
+          <div class="form__row">
+            <label class="field">
+              <span class="field__label">Stream</span>
+              <select class="field__input" formControlName="stream" data-testid="stream-input">
+                <option value="">Not specified</option>
+                @for (stream of streams; track stream.value) {
+                  <option [value]="stream.value">{{ stream.label }}</option>
+                }
+              </select>
+            </label>
+
+            @if (isScience()) {
+              <label class="field">
+                <span class="field__label">Science group</span>
+                <select
+                  class="field__input"
+                  formControlName="scienceGroup"
+                  data-testid="science-group-input"
+                >
+                  <option value="">Not specified</option>
+                  @for (group of scienceGroups; track group.value) {
+                    <option [value]="group.value">{{ group.label }}</option>
+                  }
+                </select>
+              </label>
+            }
+          </div>
+
+          <label class="field">
+            <span class="field__label">Address</span>
+            <input
+              class="field__input"
+              type="text"
+              formControlName="address"
+              autocomplete="street-address"
+              data-testid="address-input"
+            />
+          </label>
+
+          <div class="form__row">
+            <label class="field">
+              <span class="field__label">Aadhaar number</span>
+              <input
+                class="field__input"
+                [class.is-invalid]="studentError('aadhaarNumber') !== null"
+                type="text"
+                formControlName="aadhaarNumber"
+                inputmode="numeric"
+                maxlength="12"
+                data-testid="aadhaar-input"
+              />
+              @if (studentError('aadhaarNumber'); as message) {
+                <span class="field__error">{{ message }}</span>
+              }
+            </label>
+          </div>
+
+          <div class="field">
+            <span class="field__label">Subjects</span>
+
+            @if (mastersError(); as mastersError) {
+              <p class="field__error" role="alert">{{ mastersError }}</p>
+            } @else if (mastersLoading()) {
+              <p class="field__hint" role="status">Loading subjects&hellip;</p>
+            } @else if (subjectOptions().length === 0) {
+              <p class="field__hint">No subjects yet — add them under Masters first.</p>
+            } @else {
+              <input
+                class="field__input field__input--search"
+                type="search"
+                placeholder="Filter subjects&hellip;"
+                aria-label="Filter subjects"
+                data-testid="subject-search"
+                [value]="subjectQuery()"
+                (input)="subjectQuery.set($any($event.target).value)"
+              />
+
+              <div class="subject-list" role="group" aria-label="Subjects">
+                @for (subject of filteredSubjects(); track subject.id) {
+                  <label class="subject">
+                    <input
+                      type="checkbox"
+                      [checked]="subjectSelected(subject.id)"
+                      [attr.data-subject]="subject.id"
+                      (change)="toggleSubject(subject.id, $any($event.target).checked)"
+                    />
+                    <span class="subject__name">{{ subject.name }}</span>
+                    <span class="subject__meta">{{ subject.standardName }}</span>
+                  </label>
+                } @empty {
+                  <p class="field__hint">No subjects match your filter.</p>
+                }
+              </div>
+            }
+          </div>
+        </fieldset>
+      }
+
       <div class="form__actions">
-        <a class="btn-ghost" routerLink="/users">Cancel</a>
+        <a class="btn-ghost" [routerLink]="returnPath()">Cancel</a>
         <button type="submit" class="btn-primary" [disabled]="submitting()" data-testid="submit">
           @if (submitting()) {
             Saving&hellip;

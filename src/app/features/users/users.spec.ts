@@ -14,6 +14,7 @@ const USERS: SchoolUserRecord[] = [
     email: 'teacher@greenwood.test',
     phone: '+91 90000 00001',
     role: 'teacher',
+    studentProfile: null,
     status: 'active',
     lastLoginAt: '2026-10-18T10:00:00.000Z',
     createdAt: '2026-10-01T10:00:00.000Z',
@@ -24,6 +25,7 @@ const USERS: SchoolUserRecord[] = [
     email: 'staff@greenwood.test',
     phone: '',
     role: 'staff',
+    studentProfile: null,
     status: 'suspended',
     lastLoginAt: null,
     createdAt: '2026-10-02T10:00:00.000Z',
@@ -34,10 +36,19 @@ const USERS: SchoolUserRecord[] = [
     email: 'student@greenwood.test',
     phone: '',
     role: 'student',
+    studentProfile: null,
     status: 'active',
     lastLoginAt: null,
     createdAt: '2026-10-03T10:00:00.000Z',
   },
+];
+
+const ROLE_OPTIONS = [
+  { key: 'school_admin', name: 'School admin', isSystem: true },
+  { key: 'teacher', name: 'Teacher', isSystem: true },
+  { key: 'staff', name: 'Staff', isSystem: true },
+  { key: 'student', name: 'Student', isSystem: true },
+  { key: 'exam_coordinator', name: 'Exam coordinator', isSystem: false },
 ];
 
 const PAGE: SchoolUsersPage = {
@@ -74,6 +85,8 @@ describe('Users', () => {
     httpMock = TestBed.inject(HttpTestingController);
     auth = TestBed.inject(AuthService);
     fixture = TestBed.createComponent(Users);
+    fixture.detectChanges();
+    httpMock.expectOne('/api/roles/options').flush(ROLE_OPTIONS);
   });
 
   afterEach(() => httpMock.verify());
@@ -148,6 +161,20 @@ describe('Users', () => {
 
     expect(rows().length).toBe(1);
     expect(rows()[0].textContent).toContain('Esha Kulkarni');
+  });
+
+  it('uses tenant roles in the filter and labels custom roles', () => {
+    flushList({
+      ...PAGE,
+      items: [{ ...USERS[0], role: 'exam_coordinator' }],
+      total: 1,
+    });
+
+    const select = element().querySelector<HTMLSelectElement>('[data-testid="role-filter"]');
+    const option = select?.querySelector<HTMLOptionElement>('option[value="exam_coordinator"]');
+
+    expect(option?.textContent).toContain('Exam coordinator');
+    expect(rows()[0].textContent).toContain('Exam coordinator');
   });
 
   it('filters by status and searches after the debounce', async () => {
@@ -253,6 +280,7 @@ describe('Users', () => {
   });
 
   it('suspends a user and refreshes the directory', () => {
+    signIn('admin-1');
     flushList();
 
     rows()[0].querySelector<HTMLButtonElement>('[data-action="suspend"]')?.click();
@@ -274,6 +302,7 @@ describe('Users', () => {
   });
 
   it('resets a password and reveals the generated value once', () => {
+    signIn('admin-1');
     flushList();
 
     rows()[0].querySelector<HTMLButtonElement>('[data-action="reset-password"]')?.click();
@@ -303,6 +332,7 @@ describe('Users', () => {
   });
 
   it('deletes a user after an inline confirmation', () => {
+    signIn('admin-1');
     flushList();
 
     rows()[1].querySelector<HTMLButtonElement>('[data-action="delete"]')?.click();
@@ -350,5 +380,115 @@ describe('Users', () => {
     flushList();
 
     expect(rows().length).toBe(3);
+  });
+});
+
+describe('Users on a role page', () => {
+  let fixture: ComponentFixture<Users>;
+  let httpMock: HttpTestingController;
+
+  const SCOPED_PAGE: SchoolUsersPage = { ...PAGE, items: [USERS[0]], total: 1 };
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [Users],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(withInterceptors([apiErrorInterceptor])),
+        provideHttpClientTesting(),
+      ],
+    }).compileComponents();
+
+    httpMock = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => httpMock.verify());
+
+  function element(): HTMLElement {
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  function signIn(id: string): void {
+    const auth = TestBed.inject(AuthService);
+
+    auth.restore().subscribe();
+    httpMock.expectOne('/api/auth/refresh').flush({
+      accessToken: 'token-1',
+      user: { id, name: 'Asha Deshmukh', email: 'principal@greenwood.test', role: 'school_admin' },
+    });
+  }
+
+  function createScoped(role: string, pageTitle: string, pagePath: string): void {
+    fixture = TestBed.createComponent(Users);
+    fixture.componentRef.setInput('role', role);
+    fixture.componentRef.setInput('pageTitle', pageTitle);
+    fixture.componentRef.setInput('pagePath', pagePath);
+    fixture.detectChanges();
+    httpMock.expectOne('/api/roles/options').flush(ROLE_OPTIONS);
+    fixture.detectChanges();
+  }
+
+  function flushList(page: SchoolUsersPage = PAGE): void {
+    httpMock
+      .expectOne((request) => request.url === '/api/users' && request.method === 'GET')
+      .flush(page);
+    fixture.detectChanges();
+  }
+
+  it('locks the directory to the page role', () => {
+    signIn('u9');
+    createScoped('teacher', 'Teachers', '/users/teachers');
+
+    const request = httpMock.expectOne(
+      (candidate) => candidate.url === '/api/users' && candidate.method === 'GET',
+    );
+
+    expect(request.request.params.get('role')).toBe('teacher');
+    request.flush(SCOPED_PAGE);
+    fixture.detectChanges();
+
+    expect(element().querySelector('h1')?.textContent).toContain('Teachers');
+    expect(element().textContent).toContain('Review and manage teacher accounts');
+    expect(element().querySelector('[data-testid="role-filter"]')).toBeNull();
+    expect(element().querySelector('.stats')).toBeNull();
+
+    const add = element().querySelector<HTMLAnchorElement>('[data-testid="add-user"]');
+    const href = decodeURIComponent(add?.getAttribute('href') ?? '');
+
+    expect(add?.textContent).toContain('Add teacher');
+    expect(href.startsWith('/users/new?')).toBe(true);
+    expect(href).toContain('role=teacher');
+    expect(href).toContain('from=/users/teachers');
+  });
+
+  it('shows a bulk import shortcut only on the students page', () => {
+    signIn('u9');
+    createScoped('student', 'Students', '/users/students');
+    flushList(SCOPED_PAGE);
+
+    const importLink = element().querySelector<HTMLAnchorElement>(
+      '[data-testid="import-students"]',
+    );
+
+    expect(importLink?.textContent).toContain('Bulk import');
+    expect(importLink?.getAttribute('href')).toBe('/users/students/import');
+
+    fixture.destroy();
+    createScoped('teacher', 'Teachers', '/users/teachers');
+    flushList(SCOPED_PAGE);
+
+    expect(element().querySelector('[data-testid="import-students"]')).toBeNull();
+  });
+
+  it('sends edits back to the role page', () => {
+    signIn('u9');
+    createScoped('student', 'Students', '/users/students');
+    flushList(SCOPED_PAGE);
+
+    const edit = element().querySelector<HTMLAnchorElement>('[data-link="edit"]');
+    const href = decodeURIComponent(edit?.getAttribute('href') ?? '');
+
+    expect(href).toContain('/users/u1/edit');
+    expect(href).toContain('from=/users/students');
   });
 });

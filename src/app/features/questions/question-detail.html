@@ -1,0 +1,289 @@
+<section class="page">
+  <header class="page__head">
+    <div>
+      <a class="back-link" routerLink="/questions" data-testid="back-to-questions">
+        <app-icon name="arrow-right" />
+        Back to question bank
+      </a>
+      <h1>Question details</h1>
+      <p>Review the prompt, answer key and curriculum placement.</p>
+    </div>
+  </header>
+
+  @if (loading()) {
+    <div class="state" role="status">
+      <span class="spinner" aria-hidden="true"></span>
+      <p>Loading question&hellip;</p>
+    </div>
+  } @else if (error(); as error) {
+    <div class="state state--error" role="alert">
+      <app-icon name="alert-circle" />
+      <p>{{ error }}</p>
+      <button type="button" class="btn-ghost" (click)="retry()">Try again</button>
+    </div>
+  } @else if (question(); as question) {
+    @if (notice(); as notice) {
+      <p class="action-notice action-notice--success" role="status" data-testid="notice">
+        <app-icon name="check" />
+        <span class="notice-body">{{ notice }}</span>
+        <button type="button" class="notice-dismiss" (click)="dismissNotice()">
+          <app-icon name="x" />
+          <span class="sr-only">Dismiss</span>
+        </button>
+      </p>
+    }
+
+    @if (actionError(); as actionError) {
+      <p class="action-error" role="alert" data-testid="action-error">
+        <app-icon name="alert-circle" />
+        <span class="notice-body">{{ actionError }}</span>
+        <button type="button" class="notice-dismiss" (click)="dismissError()">
+          <app-icon name="x" />
+          <span class="sr-only">Dismiss</span>
+        </button>
+      </p>
+    }
+
+    @if (question.deletedAt !== null) {
+      <p class="deleted-banner">
+        <app-icon name="alert-circle" />
+        This question is in the recycle bin. Restore it to use it in papers again.
+      </p>
+    }
+
+    <section class="card detail-hero">
+      <div class="detail-hero__body">
+        <div class="badge-row">
+          <span [class]="'pill pill--' + question.status">{{ question.status }}</span>
+          <span class="pill pill--neutral">{{ question.marks }} marks</span>
+          <span class="pill pill--neutral">{{ question.questionTypeName }}</span>
+        </div>
+        <p class="question-prompt" data-testid="question-prompt">
+          <app-math-content [content]="question.text" />
+        </p>
+        <p class="question-location">
+          <app-icon name="book-open" />
+          {{ location(question) }}
+        </p>
+      </div>
+
+      @if (canManage()) {
+        <div class="detail-hero__actions">
+          @if (question.deletedAt !== null) {
+            <button
+              type="button"
+              class="btn-ghost"
+              data-testid="restore-question"
+              [disabled]="busy()"
+              (click)="restore()"
+            >
+              <app-icon name="rotate-cw" />
+              {{ busy() ? 'Restoring&hellip;' : 'Restore' }}
+            </button>
+          } @else {
+            <a
+              class="btn-primary"
+              [routerLink]="['/questions', question.id, 'edit']"
+              data-testid="edit-question"
+            >
+              <app-icon name="file-text" />
+              Edit question
+            </a>
+            <button
+              type="button"
+              class="btn-ghost"
+              data-testid="toggle-status"
+              [disabled]="busy()"
+              (click)="toggleStatus()"
+            >
+              <app-icon [name]="question.status === 'active' ? 'eye-off' : 'eye'" />
+              {{ question.status === 'active' ? 'Deactivate' : 'Activate' }}
+            </button>
+            @if (confirmDelete()) {
+              <span class="confirm">
+                <span class="confirm__text">Delete this question?</span>
+                <button
+                  type="button"
+                  class="btn-ghost btn-ghost--danger"
+                  data-testid="confirm-delete-question"
+                  [disabled]="busy()"
+                  (click)="remove()"
+                >
+                  {{ busy() ? 'Deleting&hellip;' : 'Confirm delete' }}
+                </button>
+                <button type="button" class="btn-ghost" (click)="cancelDelete()">Cancel</button>
+              </span>
+            } @else {
+              <button
+                type="button"
+                class="btn-ghost btn-ghost--danger"
+                data-testid="delete-question"
+                [disabled]="busy()"
+                (click)="requestDelete()"
+              >
+                <app-icon name="x" />
+                Delete
+              </button>
+            }
+          }
+        </div>
+      }
+    </section>
+
+    <div class="detail-grid">
+      <section class="card detail-card">
+        <h2>Classification</h2>
+        <dl class="meta-list">
+          <div>
+            <dt>Medium</dt>
+            <dd>{{ question.mediumName }}</dd>
+          </div>
+          <div>
+            <dt>Standard</dt>
+            <dd>{{ question.standardName }}</dd>
+          </div>
+          <div>
+            <dt>Subject</dt>
+            <dd>{{ question.subjectName }}</dd>
+          </div>
+          <div>
+            <dt>Chapter</dt>
+            <dd>{{ question.chapterName }}</dd>
+          </div>
+          <div>
+            <dt>Topic</dt>
+            <dd>{{ question.topicName ?? 'Not specified' }}</dd>
+          </div>
+          <div>
+            <dt>Question type</dt>
+            <dd>{{ question.questionTypeName }}</dd>
+          </div>
+          <div>
+            <dt>Difficulty</dt>
+            <dd>{{ question.difficultyLevelName }}</dd>
+          </div>
+          <div>
+            <dt>Bloom level</dt>
+            <dd>{{ question.bloomLevelName ?? 'Not specified' }}</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section class="card detail-card">
+        <h2>Record</h2>
+        <dl class="meta-list">
+          <div>
+            <dt>Status</dt>
+            <dd>{{ question.status }}</dd>
+          </div>
+          <div>
+            <dt>Marks</dt>
+            <dd>{{ question.marks }}</dd>
+          </div>
+          <div>
+            <dt>Options</dt>
+            <dd>{{ question.options.length }}</dd>
+          </div>
+          <div>
+            <dt>Answer key</dt>
+            <dd>{{ question.hasAnswer ? 'Ready' : 'Missing' }}</dd>
+          </div>
+          <div>
+            <dt>Created</dt>
+            <dd>{{ dateLabel(question.createdAt) }}</dd>
+          </div>
+          <div>
+            <dt>Updated</dt>
+            <dd>{{ dateLabel(question.updatedAt) }}</dd>
+          </div>
+          <div>
+            <dt>Source</dt>
+            <dd>{{ question.source === '' ? 'Not provided' : question.source }}</dd>
+          </div>
+          <div>
+            <dt>Tags</dt>
+            <dd>
+              @if (question.tags.length > 0) {
+                <span class="tag-list">
+                  @for (tag of question.tags; track tag) {
+                    <span class="tag">{{ tag }}</span>
+                  }
+                </span>
+              } @else {
+                None
+              }
+            </dd>
+          </div>
+        </dl>
+      </section>
+    </div>
+
+    <section class="card detail-card">
+      <div class="section-head">
+        <div>
+          <h2>Options</h2>
+          <p>Correct options are marked for the answer key.</p>
+        </div>
+        @if (correctOptions().length > 0) {
+          <span class="pill pill--correct"> {{ correctOptions().length }} correct </span>
+        }
+      </div>
+
+      @if (question.options.length > 0) {
+        <ol class="option-list">
+          @for (option of question.options; track $index) {
+            <li class="option-item" [class.is-correct]="option.isCorrect">
+              <span class="option-key">{{ optionLabel(option) }}</span>
+              <span class="option-body">
+                <app-math-content [content]="option.text" />
+              </span>
+              @if (option.isCorrect) {
+                <span class="correct-tag">
+                  <app-icon name="check" />
+                  Correct
+                </span>
+              }
+            </li>
+          }
+        </ol>
+      } @else {
+        <div class="empty empty--compact">
+          <app-icon name="list" />
+          <p>No options. This is a written-answer question.</p>
+        </div>
+      }
+    </section>
+
+    <section class="card detail-card">
+      <h2>Answer &amp; explanation</h2>
+
+      <div class="answer-block">
+        <h3>Answer key</h3>
+        @if (question.answer === '') {
+          <p class="muted-text">No written answer. See the correct options above.</p>
+        } @else {
+          <p class="answer-text">
+            <app-math-content [content]="question.answer" />
+          </p>
+        }
+      </div>
+
+      <div class="answer-block">
+        <h3>Explanation</h3>
+        @if (question.explanation === '') {
+          <p class="muted-text">No explanation provided.</p>
+        } @else {
+          <p class="answer-text">
+            <app-math-content [content]="question.explanation" />
+          </p>
+        }
+      </div>
+    </section>
+  } @else {
+    <div class="state state--error" role="alert">
+      <app-icon name="alert-circle" />
+      <p>Question not found.</p>
+      <a class="btn-ghost" routerLink="/questions">Back to question bank</a>
+    </div>
+  }
+</section>

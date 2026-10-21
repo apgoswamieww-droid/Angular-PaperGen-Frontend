@@ -12,6 +12,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
 import { AuthService } from '../core/auth/auth.service';
+import type { Permission } from '../core/auth/permissions';
 import { initialsFor, roleLabel as toRoleLabel } from '../core/auth/session.utils';
 import { Icon, type IconName } from '../shared/icon/icon';
 
@@ -77,6 +78,7 @@ export class Shell {
   protected readonly mobileNavOpen = signal(false);
   protected readonly userMenuOpen = signal(false);
   private readonly openGroups = signal<ReadonlySet<string>>(readOpenGroups());
+  private readonly currentUrl = signal(this.router.url.split(/[?#]/)[0]);
 
   private readonly userMenuRef = viewChild<ElementRef<HTMLElement>>('userMenu');
 
@@ -84,68 +86,98 @@ export class Shell {
   protected readonly initials = computed(() => initialsFor(this.user()?.name, 'AD'));
   protected readonly roleLabel = computed(() => toRoleLabel(this.user()?.role, 'Administrator'));
 
-  protected readonly navSections = computed<NavSection[]>(() => [
-    {
-      label: 'Overview',
-      items: [{ label: 'Dashboard', path: '/dashboard', icon: 'grid', exact: true }],
-    },
-    {
-      label: 'Library',
-      items: [
-        { label: 'Subjects & Chapters', path: '/subjects', icon: 'book-open' },
-        { label: 'Question Bank', path: '/questions', icon: 'help-circle' },
-        { label: 'Blueprints', path: '/blueprints', icon: 'layers' },
-      ],
-    },
-    {
-      label: 'Papers',
-      items: [
-        { label: 'Generate Paper', path: '/papers/generate', icon: 'file-plus' },
-        { label: 'My Papers', path: '/papers', icon: 'file-text', exact: true },
-      ],
-    },
-    {
-      label: 'Insights',
-      items: [
-        {
-          label: 'Reports',
-          path: '/reports',
-          icon: 'chart',
-          children: [{ label: 'Class & Student', path: '/reports/class-students' }],
-        },
-      ],
-    },
-    {
-      label: 'Setup',
-      items: [
-        {
-          label: 'Masters',
-          path: '/masters',
-          icon: 'database',
-          children: [
-            { label: 'Mediums', path: '/masters/mediums' },
-            { label: 'Standards', path: '/masters/standards' },
-            { label: 'Subjects', path: '/masters/subjects' },
-            { label: 'Chapters', path: '/masters/chapters' },
-            { label: 'Topics', path: '/masters/topics' },
-            { label: 'Question Types', path: '/masters/question-types' },
-            { label: 'Difficulty Levels', path: '/masters/difficulty-levels' },
-            { label: 'Bloom Levels', path: '/masters/bloom-levels' },
-          ],
-        },
-      ],
-    },
-    {
-      label: 'Manage',
-      items: [
-        { label: 'Classes & Students', path: '/classes', icon: 'users' },
-        ...(this.user()?.role === 'school_admin'
-          ? [{ label: 'Users', path: '/users', icon: 'user-plus' as const, exact: true }]
-          : []),
-        { label: 'Settings', path: '/settings', icon: 'settings' },
-      ],
-    },
-  ]);
+  protected readonly navSections = computed<NavSection[]>(() => {
+    const can = (permission: Permission): boolean => this.auth.can(permission);
+    const sections: NavSection[] = [
+      {
+        label: 'Overview',
+        items: [{ label: 'Dashboard', path: '/dashboard', icon: 'grid', exact: true }],
+      },
+      {
+        label: 'Manage',
+        items: [
+          ...(can('users.view')
+            ? [
+                {
+                  label: 'Users',
+                  path: '/users',
+                  icon: 'user-plus' as const,
+                  children: [
+                    { label: 'All Users', path: '/users', exact: true },
+                    { label: 'Teachers', path: '/users/teachers' },
+                    { label: 'Students', path: '/users/students' },
+                    { label: 'Staff', path: '/users/staff' },
+                  ],
+                },
+              ]
+            : []),
+          ...(can('roles.view')
+            ? [{ label: 'Roles', path: '/roles', icon: 'shield' as const, exact: true }]
+            : []),
+        ],
+      },
+      {
+        label: 'Library',
+        items: [
+          ...(can('questions.view')
+            ? [{ label: 'Question Bank', path: '/questions', icon: 'help-circle' as const }]
+            : []),
+          ...(can('blueprints.view')
+            ? [{ label: 'Blueprints', path: '/blueprints', icon: 'layers' as const }]
+            : []),
+        ],
+      },
+      {
+        label: 'Papers',
+        items: [
+          ...(can('papers.manage')
+            ? [{ label: 'Generate Paper', path: '/papers/generate', icon: 'file-plus' as const }]
+            : []),
+          ...(can('papers.view')
+            ? [{ label: 'My Papers', path: '/papers', icon: 'file-text' as const, exact: true }]
+            : []),
+        ],
+      },
+      {
+        label: 'Insights',
+        items: can('reports.view')
+          ? [
+              {
+                label: 'Reports',
+                path: '/reports',
+                icon: 'chart' as const,
+                children: [{ label: 'Class & Student', path: '/reports/class-students' }],
+              },
+            ]
+          : [],
+      },
+      {
+        label: 'Setup',
+        items: can('masters.view')
+          ? [
+              {
+                label: 'Masters',
+                path: '/masters',
+                icon: 'database' as const,
+                children: [
+                  { label: 'Mediums', path: '/masters/mediums' },
+                  { label: 'Standards', path: '/masters/standards' },
+                  { label: 'Subjects', path: '/masters/subjects' },
+                  { label: 'Chapters', path: '/masters/chapters' },
+                  { label: 'Topics', path: '/masters/topics' },
+                  { label: 'Question Types', path: '/masters/question-types' },
+                  { label: 'Difficulty Levels', path: '/masters/difficulty-levels' },
+                  { label: 'Bloom Levels', path: '/masters/bloom-levels' },
+                  { label: 'Exam Types', path: '/masters/exam-types' },
+                ],
+              },
+            ]
+          : [],
+      },
+    ];
+
+    return sections.filter((section) => section.items.length > 0);
+  });
 
   constructor() {
     this.router.events
@@ -156,6 +188,7 @@ export class Shell {
       .subscribe(() => {
         this.mobileNavOpen.set(false);
         this.userMenuOpen.set(false);
+        this.currentUrl.set(this.router.url.split(/[?#]/)[0]);
         this.syncActiveGroups();
       });
 
@@ -166,15 +199,14 @@ export class Shell {
     return this.openGroups().has(item.path);
   }
 
+  protected isGroupActive(item: NavItem): boolean {
+    return item.children?.some((child) => isItemActive(child, this.currentUrl())) ?? false;
+  }
+
   protected onGroupClick(item: NavItem): void {
-    const url = this.router.url.split(/[?#]/)[0];
     const next = new Set(this.openGroups());
 
     if (next.has(item.path)) {
-      if (url !== item.path) {
-        return;
-      }
-
       next.delete(item.path);
     } else {
       next.add(item.path);

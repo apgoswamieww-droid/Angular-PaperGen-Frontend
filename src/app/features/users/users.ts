@@ -4,33 +4,37 @@ import {
   computed,
   DestroyRef,
   inject,
+  input,
+  type OnInit,
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { debounceTime, distinctUntilChanged, finalize, Subject } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, finalize, of, Subject } from 'rxjs';
+import type { RoleOption } from '../../core/api/roles.types';
+import { RolesService } from '../../core/api/roles.service';
 import { SchoolUsersService } from '../../core/api/school-users.service';
 import type {
   GeneratedCredentials,
   SchoolUserRecord,
   SchoolUsersPage,
-  SchoolUserRole,
   SchoolUserSortDirection,
   SchoolUserSortField,
   SchoolUserStatus,
 } from '../../core/api/school-users.types';
 import { AuthService } from '../../core/auth/auth.service';
+import { roleLabel as toRoleLabel } from '../../core/auth/session.utils';
 import { Icon } from '../../shared/icon/icon';
 
-type RoleFilter = SchoolUserRole | 'all';
+type RoleFilter = string;
 type StatusFilter = SchoolUserStatus | 'all';
 
-const ROLE_LABELS: Record<SchoolUserRole, string> = {
-  school_admin: 'School admin',
-  teacher: 'Teacher',
-  staff: 'Staff',
-  student: 'Student',
-};
+const FALLBACK_ROLES: RoleOption[] = [
+  { key: 'school_admin', name: 'School admin', isSystem: true },
+  { key: 'teacher', name: 'Teacher', isSystem: true },
+  { key: 'staff', name: 'Staff', isSystem: true },
+  { key: 'student', name: 'Student', isSystem: true },
+];
 
 @Component({
   selector: 'app-users',
@@ -39,11 +43,16 @@ const ROLE_LABELS: Record<SchoolUserRole, string> = {
   styleUrl: './users.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class Users {
+export class Users implements OnInit {
   private readonly schoolUsers = inject(SchoolUsersService);
+  private readonly rolesApi = inject(RolesService);
   private readonly auth = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
+
+  readonly role = input<string>();
+  readonly pageTitle = input<string>();
+  readonly pagePath = input<string>('/users');
 
   private readonly searchInput = new Subject<string>();
 
@@ -64,6 +73,7 @@ export class Users {
   protected readonly confirmId = signal<string | null>(null);
   protected readonly result = signal<SchoolUsersPage | null>(null);
   protected readonly saved = signal(this.route.snapshot.queryParamMap.get('saved') === '1');
+  protected readonly roleOptions = signal<RoleOption[]>(FALLBACK_ROLES);
 
   protected readonly rows = computed(() => this.result()?.items ?? []);
   protected readonly summary = computed(() => this.result()?.summary ?? null);
@@ -78,10 +88,51 @@ export class Users {
     Math.min(this.page() * this.pageSize(), this.total()),
   );
   protected readonly meId = computed(() => this.auth.user()?.id ?? null);
+  protected readonly canManage = computed(() => this.auth.can('users.manage'));
+  protected readonly scoped = computed(() => {
+    const role = this.role();
 
-  protected readonly roles: RoleFilter[] = ['all', 'school_admin', 'teacher', 'staff', 'student'];
+    return role !== undefined && role !== '';
+  });
+  protected readonly studentScope = computed(() => this.role() === 'student');
+  protected readonly heading = computed(() => this.pageTitle() ?? 'Users & Roles');
+  protected readonly subtitle = computed(() => {
+    const role = this.role();
+
+    return role === undefined || role === ''
+      ? 'Manage who can sign in to your school panel and what they can access.'
+      : `Review and manage ${this.roleLabel(role).toLowerCase()} accounts in your school.`;
+  });
+  protected readonly addLabel = computed(() => {
+    const role = this.role();
+
+    return role === undefined || role === ''
+      ? 'Add user'
+      : `Add ${this.roleLabel(role).toLowerCase()}`;
+  });
+  protected readonly addUserQuery = computed<Record<string, string>>(() => {
+    const role = this.role();
+    const query: Record<string, string> = {};
+
+    if (role !== undefined && role !== '') {
+      query['role'] = role;
+      query['from'] = this.pagePath();
+    }
+
+    return query;
+  });
+  protected readonly roles = computed<RoleFilter[]>(() => [
+    'all',
+    ...this.roleOptions().map((role) => role.key),
+  ]);
+
   protected readonly statuses: StatusFilter[] = ['all', 'active', 'suspended'];
   protected readonly pageSizes = [10, 25, 50];
+
+  ngOnInit(): void {
+    this.loadRoleOptions();
+    this.load();
+  }
 
   constructor() {
     this.searchInput
@@ -91,8 +142,20 @@ export class Users {
         this.page.set(1);
         this.load();
       });
+  }
 
-    this.load();
+  protected loadRoleOptions(): void {
+    this.rolesApi
+      .options()
+      .pipe(
+        catchError(() => of<RoleOption[]>([])),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((roles) => {
+        if (roles.length > 0) {
+          this.roleOptions.set(roles);
+        }
+      });
   }
 
   protected load(quiet = false): void {
@@ -102,7 +165,8 @@ export class Users {
 
     this.error.set(null);
 
-    const role = this.roleFilter();
+    const scopedRole = this.role();
+    const role = scopedRole === undefined || scopedRole === '' ? this.roleFilter() : scopedRole;
     const status = this.statusFilter();
 
     this.schoolUsers
@@ -277,7 +341,13 @@ export class Users {
   }
 
   protected roleLabel(role: RoleFilter): string {
-    return role === 'all' ? 'All roles' : ROLE_LABELS[role];
+    if (role === 'all') {
+      return 'All roles';
+    }
+
+    const option = this.roleOptions().find((item) => item.key === role);
+
+    return option?.name ?? toRoleLabel(role, role);
   }
 
   protected idLabel(value: string | null): string {

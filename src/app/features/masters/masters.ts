@@ -66,5 +66,11 @@ export class Masters {
       icon: 'target',
       path: '/masters/bloom-levels',
     },
+    {
+      title: 'Exam Types',
+      description: 'Unit tests, mid-terms, final examinations and practicals.',
+      icon: 'file-text',
+      path: '/masters/exam-types',
+    },
   ];
 }

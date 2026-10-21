@@ -1,0 +1,429 @@
+<section class="page">
+  <header class="page__head">
+    <div>
+      <a class="back-link" routerLink="/masters" data-testid="back-to-masters">
+        <app-icon name="arrow-right" />
+        All masters
+      </a>
+      <h1>Chapters</h1>
+      <p>Map syllabus chapters to subjects so questions and papers stay organised.</p>
+    </div>
+    @if (canManage()) {
+      <button type="button" class="btn-primary" data-testid="add-chapter" (click)="openCreate()">
+        <app-icon name="plus" />
+        Add chapter
+      </button>
+    }
+  </header>
+
+  @if (summary(); as summary) {
+    <div class="stats">
+      <div class="stat">
+        <span class="stat__value">{{ summary.active }}</span>
+        <span class="stat__label">Active</span>
+      </div>
+      <div class="stat">
+        <span class="stat__value">{{ summary.inactive }}</span>
+        <span class="stat__label">Inactive</span>
+      </div>
+      <div class="stat">
+        <span class="stat__value">{{ summary.deleted }}</span>
+        <span class="stat__label">Deleted</span>
+      </div>
+    </div>
+  }
+
+  <section class="card">
+    @if (notice(); as notice) {
+      <p class="action-notice action-notice--success" role="status" data-testid="notice">
+        <app-icon name="check" />
+        <span class="notice-body">{{ notice }}</span>
+        <button type="button" class="notice-dismiss" (click)="dismissNotice()">
+          <app-icon name="x" />
+          <span class="sr-only">Dismiss</span>
+        </button>
+      </p>
+    }
+
+    @if (actionError(); as actionError) {
+      <p class="action-error" role="alert" data-testid="action-error">
+        <app-icon name="alert-circle" />
+        {{ actionError }}
+      </p>
+    }
+
+    @if (formOpen()) {
+      <form class="inline-form" [formGroup]="form" (ngSubmit)="submit()" data-testid="chapter-form">
+        <h2>{{ editing() ? 'Edit chapter' : 'New chapter' }}</h2>
+        <div class="inline-form__fields">
+          <label class="field field--grow">
+            <span class="field__label">Name</span>
+            <input
+              type="text"
+              formControlName="name"
+              placeholder="e.g. Number System"
+              maxlength="60"
+              autocomplete="off"
+              data-testid="chapter-name"
+            />
+            @if (nameError(); as error) {
+              <span class="field__error" data-testid="name-error">{{ error }}</span>
+            }
+          </label>
+          <label class="field field--wide">
+            <span class="field__label">Subject</span>
+            <select formControlName="subjectId" data-testid="chapter-subject">
+              <option value="" disabled>Select subject</option>
+              @for (subject of liveSubjects(); track subject.id) {
+                <option [value]="subject.id">{{ subjectLabel(subject) }}</option>
+              }
+            </select>
+            @if (subjectError(); as error) {
+              <span class="field__error" data-testid="subject-error">{{ error }}</span>
+            }
+          </label>
+          <label class="field field--compact">
+            <span class="field__label">Reference</span>
+            <select formControlName="referenceType" data-testid="chapter-reference">
+              <option value="ncert">NCERT</option>
+              <option value="other">Other</option>
+            </select>
+          </label>
+          <label class="field field--narrow">
+            <span class="field__label">Order</span>
+            <input
+              type="number"
+              formControlName="order"
+              min="1"
+              max="100"
+              step="1"
+              inputmode="numeric"
+              data-testid="chapter-order"
+            />
+            @if (orderError(); as error) {
+              <span class="field__error" data-testid="order-error">{{ error }}</span>
+            }
+          </label>
+          <label class="field field--compact">
+            <span class="field__label">Status</span>
+            <select formControlName="status" data-testid="chapter-status">
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </label>
+        </div>
+
+        @if (formError(); as formError) {
+          <p class="form-error" role="alert" data-testid="form-error">{{ formError }}</p>
+        }
+
+        <div class="inline-form__actions">
+          <button
+            type="submit"
+            class="btn-primary"
+            [disabled]="saving()"
+            data-testid="save-chapter"
+          >
+            {{ saving() ? 'Saving…' : editing() ? 'Save changes' : 'Add chapter' }}
+          </button>
+          @if (!editing()) {
+            <button
+              type="button"
+              class="btn-ghost"
+              [disabled]="saving()"
+              data-testid="save-and-new-chapter"
+              (click)="submitAndNew()"
+            >
+              Save &amp; new
+            </button>
+          }
+          <button type="button" class="btn-ghost" [disabled]="saving()" (click)="closeForm()">
+            Cancel
+          </button>
+        </div>
+      </form>
+    }
+
+    <div class="toolbar">
+      <label class="search">
+        <app-icon name="search" />
+        <input
+          type="search"
+          data-testid="chapter-search"
+          placeholder="Search chapters&hellip;"
+          aria-label="Search chapters"
+          [value]="query()"
+          (input)="onSearch($any($event.target).value)"
+        />
+      </label>
+
+      <label class="select">
+        <span class="sr-only">Filter by subject</span>
+        <select
+          data-testid="subject-filter"
+          [value]="subjectFilter()"
+          (change)="setSubjectFilter($any($event.target).value)"
+        >
+          <option value="all">All subjects</option>
+          @for (subject of liveSubjects(); track subject.id) {
+            <option [value]="subject.id">{{ subjectLabel(subject) }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="select">
+        <span class="sr-only">Filter by reference type</span>
+        <select
+          data-testid="reference-filter"
+          [value]="referenceFilter()"
+          (change)="setReference($any($event.target).value)"
+        >
+          @for (reference of referenceTypes; track reference) {
+            <option [value]="reference">
+              {{ reference === 'all' ? 'All types' : referenceLabel(reference) }}
+            </option>
+          }
+        </select>
+      </label>
+
+      <div class="filters" role="group" aria-label="Filter by status">
+        @for (status of statuses; track status) {
+          <button
+            type="button"
+            class="filter-chip"
+            [class.is-active]="statusFilter() === status"
+            [attr.data-status]="status"
+            [attr.aria-pressed]="statusFilter() === status"
+            (click)="setStatus(status)"
+          >
+            {{ status }}
+          </button>
+        }
+      </div>
+
+      <label class="toggle">
+        <input
+          type="checkbox"
+          data-testid="show-deleted"
+          [checked]="includeDeleted()"
+          (change)="toggleDeleted($any($event.target).checked)"
+        />
+        <span>Show deleted</span>
+      </label>
+    </div>
+
+    @if (loading()) {
+      <div class="state" role="status">
+        <span class="spinner" aria-hidden="true"></span>
+        <p>Loading chapters&hellip;</p>
+      </div>
+    } @else if (error(); as error) {
+      <div class="state state--error" role="alert">
+        <app-icon name="alert-circle" />
+        <p>{{ error }}</p>
+        <button type="button" class="btn-ghost" (click)="load()">Try again</button>
+      </div>
+    } @else if (rows().length > 0) {
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>
+                <button type="button" class="th-sort" data-sort="name" (click)="sortBy('name')">
+                  Name
+                  @if (sort() === 'name') {
+                    <app-icon
+                      name="chevron-down"
+                      class="th-sort__icon"
+                      [class.is-asc]="dir() === 'asc'"
+                    />
+                  }
+                </button>
+              </th>
+              <th>Subject</th>
+              <th>Reference</th>
+              <th>
+                <button type="button" class="th-sort" data-sort="order" (click)="sortBy('order')">
+                  Order
+                  @if (sort() === 'order') {
+                    <app-icon
+                      name="chevron-down"
+                      class="th-sort__icon"
+                      [class.is-asc]="dir() === 'asc'"
+                    />
+                  }
+                </button>
+              </th>
+              <th>Status</th>
+              <th>
+                <button
+                  type="button"
+                  class="th-sort"
+                  data-sort="createdAt"
+                  (click)="sortBy('createdAt')"
+                >
+                  Created
+                  @if (sort() === 'createdAt') {
+                    <app-icon
+                      name="chevron-down"
+                      class="th-sort__icon"
+                      [class.is-asc]="dir() === 'asc'"
+                    />
+                  }
+                </button>
+              </th>
+              <th>Updated</th>
+              <th>Deleted</th>
+              <th aria-label="Actions"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (chapter of rows(); track chapter.id) {
+              <tr
+                [attr.data-chapter]="chapter.name"
+                [class.is-deleted]="chapter.deletedAt !== null"
+              >
+                <td>
+                  <span class="name-cell">{{ chapter.name }}</span>
+                </td>
+                <td>
+                  <span class="standard-cell">
+                    <span class="standard-cell__name">{{ chapter.subjectName }}</span>
+                    <span class="medium-cell"
+                      >{{ chapter.standardName }} · {{ chapter.mediumName }}</span
+                    >
+                  </span>
+                </td>
+                <td>
+                  <span class="reference-cell">{{ referenceLabel(chapter.referenceType) }}</span>
+                </td>
+                <td>{{ chapter.order }}</td>
+                <td>
+                  <span [class]="'pill pill--' + chapter.status">{{ chapter.status }}</span>
+                </td>
+                <td>{{ dateLabel(chapter.createdAt) }}</td>
+                <td>{{ dateLabel(chapter.updatedAt) }}</td>
+                <td>{{ dateLabel(chapter.deletedAt) }}</td>
+                <td class="row-actions">
+                  @if (chapter.deletedAt !== null) {
+                    @if (canManage()) {
+                      <button
+                        type="button"
+                        class="btn-ghost"
+                        [disabled]="busyId() === chapter.id"
+                        data-action="restore"
+                        (click)="restore(chapter)"
+                      >
+                        @if (busyId() === chapter.id) {
+                          Working&hellip;
+                        } @else {
+                          Restore
+                        }
+                      </button>
+                    } @else {
+                      <span class="deleted-tag">Deleted</span>
+                    }
+                  } @else if (canManage()) {
+                    @if (confirmId() === chapter.id) {
+                      <span class="confirm">
+                        <span class="confirm__text">Delete {{ chapter.name }}?</span>
+                        <button
+                          type="button"
+                          class="btn-ghost btn-ghost--danger"
+                          [disabled]="busyId() === chapter.id"
+                          data-action="confirm-delete"
+                          (click)="confirmDelete(chapter)"
+                        >
+                          Confirm
+                        </button>
+                        <button type="button" class="btn-ghost" (click)="cancelDelete()">
+                          Cancel
+                        </button>
+                      </span>
+                    } @else {
+                      <button
+                        type="button"
+                        class="btn-ghost"
+                        data-action="edit"
+                        (click)="openEdit(chapter)"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        class="btn-ghost"
+                        [disabled]="busyId() === chapter.id"
+                        [attr.data-action]="chapter.status === 'active' ? 'deactivate' : 'activate'"
+                        (click)="toggleStatus(chapter)"
+                      >
+                        {{ chapter.status === 'active' ? 'Deactivate' : 'Activate' }}
+                      </button>
+                      <button
+                        type="button"
+                        class="btn-ghost btn-ghost--danger"
+                        [disabled]="busyId() === chapter.id"
+                        data-action="delete"
+                        (click)="requestDelete(chapter)"
+                      >
+                        Delete
+                      </button>
+                    }
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <footer class="pager">
+        <p class="pager__range">
+          Showing {{ rangeStart() }}–{{ rangeEnd() }} of {{ total() }} chapters
+        </p>
+        <label class="select select--compact">
+          <span class="sr-only">Rows per page</span>
+          <select
+            data-testid="page-size"
+            [value]="pageSize()"
+            (change)="setPageSize($any($event.target).value)"
+          >
+            @for (size of pageSizes; track size) {
+              <option [value]="size">{{ size }} / page</option>
+            }
+          </select>
+        </label>
+        <div class="pager__buttons">
+          <button
+            type="button"
+            class="btn-ghost"
+            data-action="prev-page"
+            [disabled]="page() <= 1"
+            (click)="goToPage(page() - 1)"
+          >
+            Previous
+          </button>
+          <span class="pager__page">Page {{ page() }} of {{ pageCount() }}</span>
+          <button
+            type="button"
+            class="btn-ghost"
+            data-action="next-page"
+            [disabled]="page() >= pageCount()"
+            (click)="goToPage(page() + 1)"
+          >
+            Next
+          </button>
+        </div>
+      </footer>
+    } @else if (hasFilters()) {
+      <div class="empty">
+        <app-icon name="search" />
+        <p>No chapters match your filters.</p>
+      </div>
+    } @else {
+      <div class="empty">
+        <app-icon name="file-text" />
+        <p>No chapters yet. Add the first chapter to your syllabus.</p>
+      </div>
+    }
+  </section>
+</section>

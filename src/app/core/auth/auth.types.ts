@@ -13,6 +13,11 @@ export interface ResetPasswordRequest {
   password: string;
 }
 
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
 export interface SessionUser {
   id: string;
   name: string;
@@ -20,6 +25,8 @@ export interface SessionUser {
   role: string;
   tenantId?: string;
   tenantName?: string;
+  permissions?: string[];
+  passwordExpired?: boolean;
 }
 
 export interface SessionResponse {

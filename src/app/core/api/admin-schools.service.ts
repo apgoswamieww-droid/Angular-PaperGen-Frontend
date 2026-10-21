@@ -6,6 +6,7 @@ import type {
   AdminSchoolSummary,
   CreateSchoolRequest,
   CreateSchoolResult,
+  MasterSeedResult,
   ResendInviteResult,
   ResetPasswordSendResult,
   TenantStatus,
@@ -48,5 +49,9 @@ export class AdminSchoolsService {
 
   resetPassword(id: string): Observable<ResetPasswordSendResult> {
     return this.http.post<ResetPasswordSendResult>(`${this.baseUrl}/${id}/reset-password`, {});
+  }
+
+  seedMasterData(id: string): Observable<MasterSeedResult> {
+    return this.http.post<MasterSeedResult>(`${this.baseUrl}/${id}/seed-master-data`, {});
   }
 }

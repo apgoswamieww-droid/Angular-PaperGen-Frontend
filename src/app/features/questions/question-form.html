@@ -1,0 +1,750 @@
+<section class="page">
+  <header class="page__head">
+    <div>
+      <a class="back-link" routerLink="/questions">
+        <app-icon name="arrow-right" />
+        Back to question bank
+      </a>
+      <h1>{{ editing ? 'Edit question' : 'Add question' }}</h1>
+      <p>
+        {{
+          editing
+            ? 'Update the question, answer key or classification.'
+            : 'Write a question and classify it for paper generation.'
+        }}
+      </p>
+    </div>
+  </header>
+
+  @if (loading()) {
+    <div class="state" role="status">
+      <span class="spinner" aria-hidden="true"></span>
+      <p>Loading question&hellip;</p>
+    </div>
+  } @else if (loadError(); as loadError) {
+    <div class="state state--error" role="alert">
+      <app-icon name="alert-circle" />
+      <p>{{ loadError }}</p>
+      <button type="button" class="btn-ghost" (click)="retry()">Try again</button>
+    </div>
+  } @else {
+    <form [formGroup]="form" (ngSubmit)="save()" novalidate>
+      @if (saveError(); as saveError) {
+        <p class="action-error" role="alert" data-testid="save-error">
+          <app-icon name="alert-circle" />
+          <span class="notice-body">{{ saveError }}</span>
+          <button type="button" class="notice-dismiss" (click)="dismissError()">
+            <app-icon name="x" />
+            <span class="sr-only">Dismiss</span>
+          </button>
+        </p>
+      }
+
+      <section class="card preview-card" data-testid="question-preview">
+        <div class="section-head">
+          <div>
+            <h2>Student preview</h2>
+            <p>See how the question and options will appear on the paper.</p>
+          </div>
+          <span class="pill pill--neutral">{{ preview().marks ?? 0 }} marks</span>
+        </div>
+
+        <div class="paper-preview">
+          <div class="paper-preview__meta">
+            <span>Question 1</span>
+            <span>{{ preview().marks ?? 0 }} marks</span>
+          </div>
+
+          @if (preview().text.trim() !== '') {
+            <div class="paper-preview__prompt" data-testid="preview-prompt">
+              <app-math-content [content]="preview().text" />
+            </div>
+          } @else {
+            <p class="paper-preview__placeholder">
+              Start typing the question to see a live preview here.
+            </p>
+          }
+
+          @if (preview().options.length > 0) {
+            <ol class="paper-preview__options" data-testid="preview-options">
+              @for (option of preview().options; track $index) {
+                <li>
+                  <span class="paper-preview__key">{{ option.key }}</span>
+                  <span class="paper-preview__option">
+                    <app-math-content [content]="option.text" />
+                  </span>
+                </li>
+              }
+            </ol>
+          } @else if (preview().text.trim() !== '') {
+            <p class="paper-preview__placeholder">Written-answer question &mdash; no options.</p>
+          }
+        </div>
+      </section>
+
+      <section class="card form-card">
+        <div class="section-head">
+          <div>
+            <h2>Question</h2>
+            <p>Write the prompt and place it in the right part of the curriculum.</p>
+          </div>
+        </div>
+
+        <div class="field">
+          <span class="field__label">Question text <span class="required">*</span></span>
+
+          <div
+            class="math-toolbar"
+            role="toolbar"
+            aria-label="Math and equation tools"
+            (mousedown)="focusQuestion()"
+          >
+            <button
+              type="button"
+              class="math-tool"
+              title="Fraction"
+              aria-label="Insert fraction"
+              data-testid="insert-fraction"
+              (mousedown)="$event.preventDefault()"
+              (click)="insertFraction()"
+            >
+              a&frasl;b
+            </button>
+            <button
+              type="button"
+              class="math-tool"
+              title="Power"
+              aria-label="Insert power"
+              (mousedown)="$event.preventDefault()"
+              (click)="insertPower()"
+            >
+              x<sup>2</sup>
+            </button>
+            <button
+              type="button"
+              class="math-tool"
+              title="Subscript"
+              aria-label="Insert subscript"
+              (mousedown)="$event.preventDefault()"
+              (click)="insertSubscript()"
+            >
+              x<sub>2</sub>
+            </button>
+            <button
+              type="button"
+              class="math-tool"
+              title="Square root"
+              aria-label="Insert square root"
+              (mousedown)="$event.preventDefault()"
+              (click)="insertRoot()"
+            >
+              &radic;x
+            </button>
+            <button
+              type="button"
+              class="math-tool"
+              title="Summation"
+              aria-label="Insert summation"
+              (mousedown)="$event.preventDefault()"
+              (click)="insertSum()"
+            >
+              &sum;
+            </button>
+            <button
+              type="button"
+              class="math-tool"
+              title="Integral"
+              aria-label="Insert integral"
+              (mousedown)="$event.preventDefault()"
+              (click)="insertIntegral()"
+            >
+              &int;
+            </button>
+            <span class="math-toolbar__divider" aria-hidden="true"></span>
+            <button
+              type="button"
+              class="math-tool"
+              title="Pi"
+              aria-label="Insert pi"
+              (mousedown)="$event.preventDefault()"
+              (click)="insertSymbol('pi')"
+            >
+              &pi;
+            </button>
+            <button
+              type="button"
+              class="math-tool"
+              title="Multiply"
+              aria-label="Insert multiplication sign"
+              (mousedown)="$event.preventDefault()"
+              (click)="insertSymbol('times')"
+            >
+              &times;
+            </button>
+            <button
+              type="button"
+              class="math-tool"
+              title="Divide"
+              aria-label="Insert division sign"
+              (mousedown)="$event.preventDefault()"
+              (click)="insertSymbol('divide')"
+            >
+              &divide;
+            </button>
+            <button
+              type="button"
+              class="math-tool"
+              title="Less than or equal"
+              aria-label="Insert less than or equal"
+              (mousedown)="$event.preventDefault()"
+              (click)="insertSymbol('le')"
+            >
+              &le;
+            </button>
+            <button
+              type="button"
+              class="math-tool"
+              title="Greater than or equal"
+              aria-label="Insert greater than or equal"
+              (mousedown)="$event.preventDefault()"
+              (click)="insertSymbol('ge')"
+            >
+              &ge;
+            </button>
+            <button
+              type="button"
+              class="math-tool"
+              title="Not equal"
+              aria-label="Insert not equal"
+              (mousedown)="$event.preventDefault()"
+              (click)="insertSymbol('ne')"
+            >
+              &ne;
+            </button>
+            <button
+              type="button"
+              class="math-tool"
+              title="Plus or minus"
+              aria-label="Insert plus or minus"
+              (mousedown)="$event.preventDefault()"
+              (click)="insertSymbol('pm')"
+            >
+              &plusmn;
+            </button>
+            <button
+              type="button"
+              class="math-tool"
+              title="Infinity"
+              aria-label="Insert infinity"
+              (mousedown)="$event.preventDefault()"
+              (click)="insertSymbol('infinity')"
+            >
+              &infin;
+            </button>
+            <button
+              type="button"
+              class="math-tool"
+              title="Degree"
+              aria-label="Insert degree"
+              (mousedown)="$event.preventDefault()"
+              (click)="insertSymbol('degree')"
+            >
+              &deg;
+            </button>
+            <button
+              type="button"
+              class="math-tool math-tool--accent"
+              data-testid="insert-equation"
+              (mousedown)="$event.preventDefault()"
+              (click)="openEquation()"
+            >
+              <app-icon name="plus" />
+              Equation
+            </button>
+          </div>
+
+          <textarea
+            #questionText
+            formControlName="text"
+            rows="5"
+            maxlength="5000"
+            data-testid="question-text"
+            placeholder="Type the full question. Use $...$ for inline math or open the equation tool&hellip;"
+            (focus)="focusQuestion()"
+            (paste)="onQuestionPaste($event)"
+          ></textarea>
+
+          <div class="ocr-controls">
+            <label class="ocr-language">
+              <span>Screenshot OCR</span>
+              <select
+                data-testid="ocr-language"
+                [value]="ocrLanguage()"
+                (change)="onOcrLanguageChange($event)"
+              >
+                <option value="eng+guj">English + Gujarati</option>
+                <option value="eng">English</option>
+                <option value="guj">Gujarati</option>
+              </select>
+            </label>
+            <span class="ocr-controls__hint"
+              >Paste a screenshot here or into any option to convert typed text.</span
+            >
+          </div>
+
+          @if (ocrBusy()) {
+            <p class="math-status" role="status" data-testid="ocr-status">
+              <span class="spinner" aria-hidden="true"></span>
+              {{ ocrStatus() }}
+            </p>
+          }
+
+          @if (ocrError(); as ocrError) {
+            <p class="field__error math-status--error" role="alert">
+              {{ ocrError }}
+              <button type="button" class="math-status__dismiss" (click)="dismissOcrError()">
+                Dismiss
+              </button>
+            </p>
+          }
+
+          <span class="field__hint">
+            Use <code>$...$</code> for inline math and <code>$$...$$</code> for a separate equation.
+            Paste MathType/MathML equations directly, or paste a screenshot for OCR. Check converted
+            equations before saving.
+          </span>
+
+          @if (isFieldInvalid('text')) {
+            <span class="field__error">Question text is required (up to 5,000 characters).</span>
+          }
+        </div>
+
+        <div class="form-grid">
+          <label class="field">
+            <span class="field__label">Medium <span class="required">*</span></span>
+            <select
+              formControlName="mediumId"
+              data-testid="question-medium"
+              (change)="onMediumChange()"
+            >
+              <option value="">Select medium</option>
+              @for (medium of mediumOptions(); track medium.id) {
+                <option [value]="medium.id">{{ medium.name }}</option>
+              }
+            </select>
+            @if (isFieldInvalid('mediumId')) {
+              <span class="field__error">Choose a medium.</span>
+            }
+          </label>
+
+          <label class="field">
+            <span class="field__label">Standard <span class="required">*</span></span>
+            <select
+              formControlName="standardId"
+              data-testid="question-standard"
+              (change)="onStandardChange()"
+            >
+              <option value="">Select standard</option>
+              @for (standard of standardOptions(); track standard.id) {
+                <option [value]="standard.id">{{ standard.name }}</option>
+              }
+            </select>
+            @if (isFieldInvalid('standardId')) {
+              <span class="field__error">Choose a standard.</span>
+            }
+          </label>
+
+          <label class="field">
+            <span class="field__label">Subject <span class="required">*</span></span>
+            <select
+              formControlName="subjectId"
+              data-testid="question-subject"
+              (change)="onSubjectChange()"
+            >
+              <option value="">Select subject</option>
+              @for (subject of subjectOptions(); track subject.id) {
+                <option [value]="subject.id">{{ subject.name }}</option>
+              }
+            </select>
+            @if (isFieldInvalid('subjectId')) {
+              <span class="field__error">Choose a subject.</span>
+            }
+          </label>
+
+          <label class="field">
+            <span class="field__label">Chapter <span class="required">*</span></span>
+            <select
+              formControlName="chapterId"
+              data-testid="question-chapter"
+              (change)="onChapterChange()"
+            >
+              <option value="">Select chapter</option>
+              @for (chapter of chapterOptions(); track chapter.id) {
+                <option [value]="chapter.id">{{ chapter.name }}</option>
+              }
+            </select>
+            @if (isFieldInvalid('chapterId')) {
+              <span class="field__error">Choose a chapter.</span>
+            }
+          </label>
+
+          <label class="field">
+            <span class="field__label">Topic <span class="optional">(optional)</span></span>
+            <select
+              formControlName="topicId"
+              data-testid="question-topic"
+              [disabled]="selectedChapter() === '' || topicsLoading()"
+            >
+              <option value="">
+                {{ topicsLoading() ? 'Loading topics&hellip;' : 'No specific topic' }}
+              </option>
+              @for (topic of topicOptions(); track topic.id) {
+                <option [value]="topic.id">{{ topic.name }}</option>
+              }
+            </select>
+            @if (topicsError(); as topicsError) {
+              <span class="field__error">{{ topicsError }}</span>
+            }
+          </label>
+
+          <label class="field">
+            <span class="field__label">Question type <span class="required">*</span></span>
+            <select formControlName="questionTypeId" data-testid="question-type">
+              <option value="">Select type</option>
+              @for (type of questionTypeOptions(); track type.id) {
+                <option [value]="type.id">{{ type.name }}</option>
+              }
+            </select>
+            @if (isFieldInvalid('questionTypeId')) {
+              <span class="field__error">Choose a question type.</span>
+            }
+          </label>
+
+          <label class="field">
+            <span class="field__label">Difficulty <span class="required">*</span></span>
+            <select formControlName="difficultyLevelId" data-testid="question-difficulty">
+              <option value="">Select difficulty</option>
+              @for (level of difficultyOptions(); track level.id) {
+                <option [value]="level.id">{{ level.name }}</option>
+              }
+            </select>
+            @if (isFieldInvalid('difficultyLevelId')) {
+              <span class="field__error">Choose a difficulty level.</span>
+            }
+          </label>
+
+          <label class="field">
+            <span class="field__label">Bloom level <span class="optional">(optional)</span></span>
+            <select formControlName="bloomLevelId" data-testid="question-bloom">
+              <option value="">Not specified</option>
+              @for (level of bloomOptions(); track level.id) {
+                <option [value]="level.id">{{ level.name }}</option>
+              }
+            </select>
+            <span class="field__hint">Set automatically from difficulty; you can change it.</span>
+          </label>
+
+          <label class="field">
+            <span class="field__label">Marks <span class="required">*</span></span>
+            <input
+              type="number"
+              formControlName="marks"
+              data-testid="question-marks"
+              min="0.5"
+              max="100"
+              step="0.5"
+            />
+            @if (isFieldInvalid('marks')) {
+              <span class="field__error">Enter marks between 0.5 and 100.</span>
+            }
+          </label>
+
+          <fieldset class="field field--fieldset">
+            <legend class="field__label">Status</legend>
+            <div class="status-choice">
+              <label class="status-option">
+                <input type="radio" formControlName="status" value="active" />
+                <span>
+                  <span class="status-option__name">Active</span>
+                  <span class="status-option__hint">Available for papers</span>
+                </span>
+              </label>
+              <label class="status-option">
+                <input type="radio" formControlName="status" value="inactive" />
+                <span>
+                  <span class="status-option__name">Inactive</span>
+                  <span class="status-option__hint">Draft or retired</span>
+                </span>
+              </label>
+            </div>
+          </fieldset>
+        </div>
+      </section>
+
+      <section class="card form-card">
+        <div class="section-head">
+          <div>
+            <h2>Options</h2>
+            <p>Optional. Add two to ten choices and mark at least one as correct.</p>
+          </div>
+          <button
+            type="button"
+            class="btn-ghost"
+            data-testid="add-option"
+            [disabled]="!canAddOption"
+            (click)="addOption()"
+          >
+            <app-icon name="plus" />
+            Add option
+          </button>
+        </div>
+
+        @if (options.length > 0) {
+          <div class="option-list" data-testid="option-list">
+            @for (option of options.controls; track option; let index = $index) {
+              <div class="option-row" [formGroup]="option">
+                <label
+                  class="option-correct"
+                  [attr.aria-label]="'Correct option ' + optionLetter(index)"
+                >
+                  <input type="checkbox" formControlName="isCorrect" />
+                  <span class="option-correct__mark">
+                    <app-icon name="check" />
+                  </span>
+                </label>
+                <input
+                  class="option-key"
+                  formControlName="key"
+                  maxlength="5"
+                  [attr.aria-label]="'Option ' + optionLetter(index) + ' key'"
+                />
+                <div class="option-editor">
+                  <input
+                    class="option-text"
+                    formControlName="text"
+                    maxlength="1000"
+                    [attr.data-testid]="'option-text-' + index"
+                    [placeholder]="'Option ' + optionLetter(index) + ' text'"
+                    (focus)="focusOption(index)"
+                    (paste)="onOptionPaste($event, index)"
+                  />
+                  <div
+                    class="option-math"
+                    role="toolbar"
+                    [attr.aria-label]="'Math tools for option ' + optionLetter(index)"
+                    (mousedown)="focusOption(index)"
+                  >
+                    <button
+                      type="button"
+                      class="math-tool math-tool--mini"
+                      title="Fraction"
+                      [attr.aria-label]="'Insert fraction in option ' + optionLetter(index)"
+                      (mousedown)="$event.preventDefault()"
+                      (click)="insertFraction()"
+                    >
+                      a&frasl;b
+                    </button>
+                    <button
+                      type="button"
+                      class="math-tool math-tool--mini"
+                      title="Power"
+                      [attr.aria-label]="'Insert power in option ' + optionLetter(index)"
+                      (mousedown)="$event.preventDefault()"
+                      (click)="insertPower()"
+                    >
+                      x<sup>2</sup>
+                    </button>
+                    <button
+                      type="button"
+                      class="math-tool math-tool--mini"
+                      title="Square root"
+                      [attr.aria-label]="'Insert square root in option ' + optionLetter(index)"
+                      (mousedown)="$event.preventDefault()"
+                      (click)="insertRoot()"
+                    >
+                      &radic;x
+                    </button>
+                    <button
+                      type="button"
+                      class="math-tool math-tool--mini math-tool--accent"
+                      title="Equation editor"
+                      [attr.aria-label]="'Insert equation in option ' + optionLetter(index)"
+                      [attr.data-testid]="'option-equation-' + index"
+                      (mousedown)="$event.preventDefault()"
+                      (click)="openEquation()"
+                    >
+                      ƒx
+                    </button>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  class="icon-button icon-button--danger"
+                  [attr.aria-label]="'Remove option ' + optionLetter(index)"
+                  (click)="removeOption(index)"
+                >
+                  <app-icon name="x" />
+                </button>
+                @if (optionError(index, 'text')) {
+                  <p class="field__error option-row__error">Option text is required.</p>
+                }
+              </div>
+            }
+          </div>
+          <p class="form-hint">
+            Tick one or more choices as correct. For multiple-correct questions, tick every correct
+            option. Use the math buttons beside each option for equations; paste a screenshot to OCR
+            it.
+          </p>
+        } @else {
+          <div class="empty empty--compact">
+            <app-icon name="list" />
+            <p>
+              No options yet. Leave this empty for a written-answer question or add options for an
+              objective question.
+            </p>
+          </div>
+        }
+      </section>
+
+      <section class="card form-card">
+        <div class="section-head">
+          <div>
+            <h2>Answer &amp; references</h2>
+            <p>Active questions need an answer key or a correct option.</p>
+          </div>
+        </div>
+
+        <div class="form-grid form-grid--two">
+          <label class="field">
+            <span class="field__label">Answer key</span>
+            <textarea
+              formControlName="answer"
+              rows="4"
+              maxlength="5000"
+              data-testid="question-answer"
+              placeholder="Model answer, final value or marking guidance&hellip;"
+            ></textarea>
+            @if (isFieldInvalid('answer')) {
+              <span class="field__error">Answer must be 5,000 characters or fewer.</span>
+            }
+          </label>
+
+          <label class="field">
+            <span class="field__label">Explanation <span class="optional">(optional)</span></span>
+            <textarea
+              formControlName="explanation"
+              rows="4"
+              maxlength="5000"
+              placeholder="Reasoning, steps or notes for reviewers&hellip;"
+            ></textarea>
+            @if (isFieldInvalid('explanation')) {
+              <span class="field__error">Explanation must be 5,000 characters or fewer.</span>
+            }
+          </label>
+
+          <label class="field">
+            <span class="field__label">Source <span class="optional">(optional)</span></span>
+            <input
+              type="text"
+              formControlName="source"
+              maxlength="200"
+              placeholder="Textbook, chapter or assessment reference"
+            />
+            @if (isFieldInvalid('source')) {
+              <span class="field__error">Source must be 200 characters or fewer.</span>
+            }
+          </label>
+
+          <label class="field">
+            <span class="field__label">Tags <span class="optional">(optional)</span></span>
+            <input
+              type="text"
+              formControlName="tags"
+              data-testid="question-tags"
+              placeholder="Comma-separated, e.g. algebra, word problem"
+            />
+            <span class="field__hint">Up to 20 tags, separated by commas.</span>
+          </label>
+        </div>
+      </section>
+
+      <footer class="form-actions">
+        <a class="btn-ghost" routerLink="/questions">Cancel</a>
+        <button type="submit" class="btn-primary" [disabled]="saving()" data-testid="save-question">
+          <app-icon name="check" />
+          {{ saving() ? 'Saving&hellip;' : editing ? 'Save changes' : 'Create question' }}
+        </button>
+      </footer>
+    </form>
+
+    @if (equationOpen()) {
+      <div class="math-dialog" role="dialog" aria-modal="true" aria-labelledby="math-dialog-title">
+        <div class="math-dialog__backdrop" (click)="closeEquation()"></div>
+        <div class="math-dialog__panel" (keydown.escape)="closeEquation()">
+          <div class="section-head">
+            <div>
+              <h2 id="math-dialog-title">Insert equation</h2>
+              <p>Write LaTeX and check the preview before inserting it.</p>
+            </div>
+            <button
+              type="button"
+              class="icon-button"
+              aria-label="Close equation editor"
+              (click)="closeEquation()"
+            >
+              <app-icon name="x" />
+            </button>
+          </div>
+
+          <label class="field">
+            <span class="field__label">LaTeX</span>
+            <textarea
+              #equationInput
+              rows="4"
+              [value]="equationLatex()"
+              data-testid="equation-latex"
+              placeholder="e.g. \frac{x+1}{x-1}"
+              (input)="onEquationInput($event)"
+              (keydown.control.enter)="insertEquation()"
+            ></textarea>
+          </label>
+
+          <div class="math-dialog__preview">
+            <span class="field__label">Preview</span>
+            @if (equationPreview() !== '') {
+              <p data-testid="equation-preview">
+                <app-math-content [content]="equationPreview()" />
+              </p>
+            } @else {
+              <p class="paper-preview__placeholder">Your equation preview appears here.</p>
+            }
+          </div>
+
+          <label class="math-dialog__option">
+            <input
+              type="checkbox"
+              [checked]="equationDisplay()"
+              (change)="onEquationDisplayChange($event)"
+            />
+            <span>Display as a separate equation</span>
+          </label>
+
+          <div class="math-dialog__actions">
+            <button type="button" class="btn-ghost" (click)="closeEquation()">Cancel</button>
+            <button
+              type="button"
+              class="btn-primary"
+              data-testid="insert-equation-confirm"
+              [disabled]="equationLatex().trim() === ''"
+              (click)="insertEquation()"
+            >
+              <app-icon name="check" />
+              Insert equation
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+  }
+</section>

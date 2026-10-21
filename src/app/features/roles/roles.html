@@ -1,0 +1,435 @@
+<section class="page">
+  <header class="page__head">
+    <div>
+      <h1>Roles &amp; Permissions</h1>
+      <p>Define what each role can view and manage across your school panel.</p>
+    </div>
+    @if (canManage()) {
+      <button type="button" class="btn-primary" data-testid="add-role" (click)="openCreate()">
+        <app-icon name="plus" />
+        New role
+      </button>
+    }
+  </header>
+
+  @if (summary(); as summary) {
+    <div class="stats">
+      <div class="stat">
+        <span class="stat__value">{{ summary.total }}</span>
+        <span class="stat__label">Total roles</span>
+      </div>
+      <div class="stat">
+        <span class="stat__value">{{ summary.system }}</span>
+        <span class="stat__label">Built-in</span>
+      </div>
+      <div class="stat">
+        <span class="stat__value">{{ summary.custom }}</span>
+        <span class="stat__label">Custom</span>
+      </div>
+      <div class="stat">
+        <span class="stat__value">{{ summary.assignedUsers }}</span>
+        <span class="stat__label">Assigned users</span>
+      </div>
+    </div>
+  }
+
+  <div class="roles-layout">
+    <section class="card">
+      @if (notice(); as notice) {
+        <p class="action-notice action-notice--success" role="status" data-testid="roles-notice">
+          <app-icon name="check" />
+          {{ notice }}
+          <button type="button" class="notice-dismiss" (click)="dismissNotice()">
+            <app-icon name="x" />
+            <span class="sr-only">Dismiss</span>
+          </button>
+        </p>
+      }
+
+      @if (actionError(); as actionError) {
+        <p class="action-error" role="alert" data-testid="roles-action-error">
+          <app-icon name="alert-circle" />
+          {{ actionError }}
+        </p>
+      }
+
+      @if (formOpen()) {
+        <form
+          class="role-form"
+          [formGroup]="form"
+          (ngSubmit)="submit()"
+          novalidate
+          data-testid="role-form"
+        >
+          <header class="role-form__head">
+            <div>
+              <h2>
+                @if (editingRole()) {
+                  {{ editingSchoolAdmin() ? 'School admin access' : 'Edit role' }}
+                } @else {
+                  Create a role
+                }
+              </h2>
+              <p>
+                @if (editingSchoolAdmin()) {
+                  The school admin role always has full access and cannot be changed.
+                } @else if (editingSystem()) {
+                  Built-in role. You can adjust its permissions, but its name is fixed.
+                } @else {
+                  Pick the access this role should have. Manage access includes viewing.
+                }
+              </p>
+            </div>
+            <button
+              type="button"
+              class="icon-btn"
+              aria-label="Close role editor"
+              (click)="closeForm()"
+            >
+              <app-icon name="x" />
+            </button>
+          </header>
+
+          <div class="role-form__fields">
+            <label class="field">
+              <span class="field__label">Role name</span>
+              <input
+                type="text"
+                formControlName="name"
+                data-testid="role-name"
+                maxlength="60"
+                [attr.readonly]="editingSystem()"
+              />
+              @if (errorFor('name'); as message) {
+                <span class="field__error">{{ message }}</span>
+              } @else if (!editingSystem()) {
+                <span class="field__hint">A custom role key is generated automatically.</span>
+              }
+            </label>
+
+            <label class="field">
+              <span class="field__label"
+                >Description <span class="field__optional">Optional</span></span
+              >
+              <textarea
+                formControlName="description"
+                data-testid="role-description"
+                rows="2"
+                maxlength="240"
+                [attr.readonly]="editingSchoolAdmin()"
+                placeholder="What is this role responsible for?"
+              ></textarea>
+              @if (errorFor('description'); as message) {
+                <span class="field__error">{{ message }}</span>
+              }
+            </label>
+          </div>
+
+          <div class="matrix-head">
+            <div>
+              <h3>Permissions</h3>
+              <p>{{ selectedCount() }} selected</p>
+            </div>
+            @if (!editingSchoolAdmin()) {
+              <div class="matrix-actions">
+                <button type="button" class="btn-ghost" (click)="toggleAll(true)">
+                  Select all
+                </button>
+                <button type="button" class="btn-ghost" (click)="toggleAll(false)">Clear</button>
+              </div>
+            }
+          </div>
+
+          <div class="matrix">
+            @for (group of catalog(); track group.area) {
+              <fieldset class="matrix__group">
+                <legend>
+                  <span>{{ group.label }}</span>
+                  <small>{{ group.description }}</small>
+                </legend>
+                <div class="matrix__options">
+                  @for (permission of group.permissions; track permission.key) {
+                    <label class="permission">
+                      <input
+                        type="checkbox"
+                        [attr.data-testid]="'permission-' + permission.key"
+                        [checked]="isSelected(permission.key)"
+                        [disabled]="editingSchoolAdmin()"
+                        (change)="togglePermission(permission.key, $any($event.target).checked)"
+                      />
+                      <span class="permission__body">
+                        <span class="permission__label">{{ permission.label }}</span>
+                        <span class="permission__desc">{{ permission.description }}</span>
+                      </span>
+                    </label>
+                  }
+                </div>
+              </fieldset>
+            }
+          </div>
+
+          @if (formError(); as formError) {
+            <p class="form-error" role="alert" data-testid="role-form-error">
+              <app-icon name="alert-circle" />
+              {{ formError }}
+            </p>
+          }
+
+          <div class="role-form__actions">
+            @if (!editingSchoolAdmin()) {
+              <button
+                type="submit"
+                class="btn-primary"
+                [disabled]="saving()"
+                data-testid="save-role"
+              >
+                @if (saving()) {
+                  Saving&hellip;
+                } @else if (editingRole()) {
+                  Save changes
+                } @else {
+                  Create role
+                }
+              </button>
+            }
+            <button type="button" class="btn-ghost" (click)="closeForm()">
+              {{ editingSchoolAdmin() ? 'Close' : 'Cancel' }}
+            </button>
+          </div>
+        </form>
+      }
+
+      <div class="toolbar">
+        <label class="search">
+          <app-icon name="search" />
+          <input
+            type="search"
+            data-testid="role-search"
+            placeholder="Search roles&hellip;"
+            aria-label="Search roles"
+            [value]="query()"
+            (input)="onSearch($any($event.target).value)"
+          />
+        </label>
+        <span class="toolbar__count">{{ total() }} {{ total() === 1 ? 'role' : 'roles' }}</span>
+      </div>
+
+      @if (loading()) {
+        <div class="state" role="status">
+          <span class="spinner" aria-hidden="true"></span>
+          <p>Loading roles&hellip;</p>
+        </div>
+      } @else if (error(); as error) {
+        <div class="state state--error" role="alert">
+          <app-icon name="alert-circle" />
+          <p>{{ error }}</p>
+          <button type="button" class="btn-ghost" (click)="load()">Try again</button>
+        </div>
+      } @else if (rows().length > 0) {
+        <div class="role-list">
+          @for (role of rows(); track role.key) {
+            <article class="role" data-testid="role-row" [attr.data-role]="role.key">
+              <div class="role__top">
+                <div class="role__intro">
+                  <div class="role__title">
+                    <h3>{{ role.name }}</h3>
+                    <span class="badge" [class.badge--system]="role.isSystem">
+                      {{ role.isSystem ? 'Built-in' : 'Custom' }}
+                    </span>
+                    @if (role.key === 'school_admin') {
+                      <span class="badge badge--full">Full access</span>
+                    }
+                  </div>
+                  <p class="role__desc">{{ role.description || 'No description provided.' }}</p>
+                </div>
+
+                @if (canManage()) {
+                  <div class="role__actions">
+                    @if (confirmKey() === role.key) {
+                      <span class="confirm">
+                        <span class="confirm__text">Delete?</span>
+                        <button
+                          type="button"
+                          class="btn-ghost btn-ghost--danger"
+                          [disabled]="busyKey() === role.key"
+                          data-testid="confirm-delete-role"
+                          [attr.data-role]="role.key"
+                          (click)="confirmDelete(role)"
+                        >
+                          Confirm
+                        </button>
+                        <button type="button" class="btn-ghost" (click)="cancelDelete()">
+                          Cancel
+                        </button>
+                      </span>
+                    } @else {
+                      <button
+                        type="button"
+                        class="btn-ghost"
+                        data-testid="edit-role"
+                        [attr.data-role]="role.key"
+                        (click)="openEdit(role)"
+                      >
+                        Edit
+                      </button>
+                      @if (!role.isSystem) {
+                        <button
+                          type="button"
+                          class="btn-ghost btn-ghost--danger"
+                          [disabled]="busyKey() === role.key"
+                          data-testid="delete-role"
+                          [attr.data-role]="role.key"
+                          (click)="requestDelete(role)"
+                        >
+                          Delete
+                        </button>
+                      }
+                    }
+                  </div>
+                }
+              </div>
+
+              <div class="role__meta">
+                <span class="meta-item">
+                  <app-icon name="shield" />
+                  {{ role.permissions.length }}
+                  {{ role.permissions.length === 1 ? 'permission' : 'permissions' }}
+                </span>
+                <span class="meta-item">
+                  <app-icon name="users" />
+                  {{ role.userCount }} {{ role.userCount === 1 ? 'user' : 'users' }}
+                </span>
+                @if (role.isSystem) {
+                  <span class="meta-item meta-item--locked">
+                    <app-icon name="lock" />
+                    Protected
+                  </span>
+                } @else {
+                  <code class="role__key">{{ role.key }}</code>
+                }
+              </div>
+
+              <div class="role__perms">
+                @for (permission of visiblePermissions(role); track permission) {
+                  <span class="perm">{{ permissionLabel(permission) }}</span>
+                }
+                @if (role.permissions.length > 4) {
+                  <span class="perm perm--more">+{{ role.permissions.length - 4 }} more</span>
+                }
+                @if (role.permissions.length === 0) {
+                  <span class="perm perm--muted">No permissions</span>
+                }
+              </div>
+            </article>
+          }
+        </div>
+
+        <footer class="pager">
+          <p class="pager__range">
+            Showing {{ rangeStart() }}&ndash;{{ rangeEnd() }} of {{ total() }} roles
+          </p>
+          <label class="select">
+            <span class="sr-only">Roles per page</span>
+            <select
+              data-testid="roles-page-size"
+              [value]="pageSize()"
+              (change)="setPageSize($any($event.target).value)"
+            >
+              @for (size of pageSizes; track size) {
+                <option [value]="size">{{ size }} / page</option>
+              }
+            </select>
+          </label>
+          <div class="pager__buttons">
+            <button
+              type="button"
+              class="btn-ghost"
+              data-testid="roles-prev-page"
+              [disabled]="page() <= 1"
+              (click)="goToPage(page() - 1)"
+            >
+              Previous
+            </button>
+            <span class="pager__page">Page {{ page() }} of {{ pageCount() }}</span>
+            <button
+              type="button"
+              class="btn-ghost"
+              data-testid="roles-next-page"
+              [disabled]="page() >= pageCount()"
+              (click)="goToPage(page() + 1)"
+            >
+              Next
+            </button>
+          </div>
+        </footer>
+      } @else if (total() === 0) {
+        <div class="empty">
+          <app-icon name="shield" />
+          <p>No roles yet. Create a custom role to get started.</p>
+        </div>
+      } @else {
+        <div class="empty">
+          <app-icon name="search" />
+          <p>No roles match your search.</p>
+        </div>
+      }
+    </section>
+
+    <aside class="card audit">
+      <header class="audit__head">
+        <div>
+          <h2>Recent activity</h2>
+          <p>{{ auditTotal() }} {{ auditTotal() === 1 ? 'change' : 'changes' }}</p>
+        </div>
+        <button
+          type="button"
+          class="icon-btn"
+          aria-label="Refresh activity"
+          data-testid="refresh-audit"
+          (click)="loadAudit()"
+        >
+          <app-icon name="rotate-cw" />
+        </button>
+      </header>
+
+      @if (auditLoading()) {
+        <div class="state state--compact" role="status">
+          <span class="spinner" aria-hidden="true"></span>
+          <p>Loading activity&hellip;</p>
+        </div>
+      } @else if (auditError(); as auditError) {
+        <div class="state state--compact state--error" role="alert">
+          <app-icon name="alert-circle" />
+          <p>{{ auditError }}</p>
+          <button type="button" class="btn-ghost" (click)="loadAudit()">Try again</button>
+        </div>
+      } @else if (auditEntries().length > 0) {
+        <ol class="audit-list">
+          @for (entry of auditEntries(); track entry.id) {
+            <li class="audit-item" data-testid="audit-entry" [attr.data-action]="entry.action">
+              <span class="audit-dot" [attr.data-action]="entry.action"></span>
+              <div class="audit-item__body">
+                <p class="audit-item__title">
+                  <strong>{{ entry.actorName }}</strong>
+                  {{ actionLabel(entry.action).toLowerCase() }}
+                  <strong>{{ entry.roleName }}</strong>
+                </p>
+                @if (auditChangeLabel(entry); as change) {
+                  <p class="audit-item__change">{{ change }}</p>
+                }
+                <p class="audit-item__meta">
+                  {{ dateTimeLabel(entry.createdAt) }} &middot; {{ entry.actorEmail }}
+                </p>
+              </div>
+            </li>
+          }
+        </ol>
+      } @else {
+        <div class="empty empty--compact">
+          <app-icon name="clock" />
+          <p>No role changes yet.</p>
+        </div>
+      }
+    </aside>
+  </div>
+</section>

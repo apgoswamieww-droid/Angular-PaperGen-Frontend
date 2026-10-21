@@ -9,6 +9,7 @@ import type {
   SchoolUsersPage,
   SchoolUsersQuery,
   SchoolUserStatus,
+  StudentImportResult,
   UpdateUserRequest,
 } from './school-users.types';
 
@@ -73,5 +74,13 @@ export class SchoolUsersService {
 
   remove(id: string): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/${id}`);
+  }
+
+  importTemplate(): Observable<ArrayBuffer> {
+    return this.http.get(`${this.baseUrl}/import-template`, { responseType: 'arraybuffer' });
+  }
+
+  importStudents(csv: string): Observable<StudentImportResult> {
+    return this.http.post<StudentImportResult>(`${this.baseUrl}/import`, { csv });
   }
 }

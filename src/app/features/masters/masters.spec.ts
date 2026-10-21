@@ -19,12 +19,12 @@ describe('Masters', () => {
     return fixture.nativeElement as HTMLElement;
   }
 
-  it('lists all eight masters with links', () => {
+  it('lists all nine masters with links', () => {
     const cards = Array.from(
       element().querySelectorAll<HTMLAnchorElement>('[data-testid="master-card"]'),
     );
 
-    expect(cards.length).toBe(8);
+    expect(cards.length).toBe(9);
     expect(element().textContent).toContain('Mediums');
     expect(element().textContent).toContain('Standards');
     expect(element().textContent).toContain('Subjects');
@@ -33,6 +33,7 @@ describe('Masters', () => {
     expect(element().textContent).toContain('Question Types');
     expect(element().textContent).toContain('Difficulty Levels');
     expect(element().textContent).toContain('Bloom Levels');
+    expect(element().textContent).toContain('Exam Types');
     expect(cards.map((card) => card.getAttribute('href'))).toEqual([
       '/masters/mediums',
       '/masters/standards',
@@ -42,6 +43,7 @@ describe('Masters', () => {
       '/masters/question-types',
       '/masters/difficulty-levels',
       '/masters/bloom-levels',
+      '/masters/exam-types',
     ]);
   });
 });

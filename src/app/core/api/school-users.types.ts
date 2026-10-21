@@ -1,7 +1,52 @@
-export type SchoolUserRole = 'school_admin' | 'teacher' | 'staff' | 'student';
+export type SchoolUserRole = string;
 export type SchoolUserStatus = 'active' | 'suspended';
 export type SchoolUserSortField = 'name' | 'createdAt';
 export type SchoolUserSortDirection = 'asc' | 'desc';
+export type StudentGender = 'male' | 'female' | 'other';
+export type StudentStream = 'science' | 'arts' | 'commerce' | 'none';
+export type ScienceGroup = 'a' | 'b' | 'ab';
+
+export interface StudentProfileRecord {
+  surname: string;
+  firstName: string;
+  lastName: string;
+  grNumber: string;
+  rollNumber: string;
+  fatherFullName: string;
+  motherFullName: string;
+  gender: StudentGender | null;
+  dateOfBirth: string | null;
+  address: string;
+  mobile: string;
+  whatsappNumber: string;
+  stream: StudentStream | null;
+  scienceGroup: ScienceGroup | null;
+  subjectIds: string[];
+  aadhaarNumber: string;
+  mediumId: string | null;
+  standardId: string | null;
+}
+
+export interface StudentProfileRequest {
+  surname?: string;
+  firstName?: string;
+  lastName?: string;
+  grNumber?: string;
+  rollNumber?: string;
+  fatherFullName?: string;
+  motherFullName?: string;
+  gender?: StudentGender | '';
+  dateOfBirth?: string;
+  address?: string;
+  mobile?: string;
+  whatsappNumber?: string;
+  stream?: StudentStream | '';
+  scienceGroup?: ScienceGroup | '';
+  subjectIds?: string[];
+  aadhaarNumber?: string;
+  mediumId?: string;
+  standardId?: string;
+}
 
 export interface SchoolUserRecord {
   id: string;
@@ -9,6 +54,7 @@ export interface SchoolUserRecord {
   email: string;
   phone: string;
   role: SchoolUserRole;
+  studentProfile: StudentProfileRecord | null;
   status: SchoolUserStatus;
   lastLoginAt: string | null;
   createdAt: string;
@@ -34,7 +80,7 @@ export interface SchoolUsersPage {
 
 export interface SchoolUsersQuery {
   search?: string;
-  role?: SchoolUserRole | '';
+  role?: string;
   status?: SchoolUserStatus | '';
   page?: number;
   pageSize?: number;
@@ -47,6 +93,7 @@ export interface CreateUserRequest {
   email: string;
   phone?: string;
   role: SchoolUserRole;
+  studentProfile?: StudentProfileRequest;
 }
 
 export interface UpdateUserRequest {
@@ -54,6 +101,7 @@ export interface UpdateUserRequest {
   email?: string;
   phone?: string;
   role?: SchoolUserRole;
+  studentProfile?: StudentProfileRequest;
 }
 
 export interface GeneratedCredentials {
@@ -65,4 +113,20 @@ export interface GeneratedCredentials {
 export interface CreateUserResult {
   user: SchoolUserRecord;
   credentials: GeneratedCredentials;
+}
+
+export interface StudentImportRowResult {
+  row: number;
+  name: string;
+  email: string;
+  status: 'created' | 'failed';
+  error: string | null;
+  password: string | null;
+}
+
+export interface StudentImportResult {
+  total: number;
+  created: number;
+  failed: number;
+  results: StudentImportRowResult[];
 }

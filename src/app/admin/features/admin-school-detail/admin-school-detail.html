@@ -101,6 +101,16 @@
             <app-icon name="mail" />
             {{ resetting() ? 'Sending&hellip;' : 'Reset password' }}
           </button>
+          <button
+            type="button"
+            class="btn-ghost"
+            data-action="seed-master-data"
+            [disabled]="seeding()"
+            (click)="seedMasterData()"
+          >
+            <app-icon name="database" />
+            {{ seeding() ? 'Seeding&hellip;' : 'Seed master data' }}
+          </button>
         </div>
       }
 
@@ -148,6 +158,13 @@
             <strong>{{ reset.email }}</strong> — it stays valid for
             {{ reset.expiresInHours }} hours.
           }
+        </p>
+      }
+
+      @if (seedResult(); as seeded) {
+        <p class="alert alert--success" role="status" data-testid="seed-banner">
+          <app-icon name="check" />
+          {{ seedSummary(seeded) }}
         </p>
       }
     </section>

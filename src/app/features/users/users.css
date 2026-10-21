@@ -32,6 +32,34 @@
   color: var(--pg-ink-muted);
 }
 
+.page__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.page__actions .btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 2.75rem;
+  padding: 0 1rem;
+  border: 1px solid var(--pg-border);
+  border-radius: 0.75rem;
+  background: var(--pg-surface);
+  color: var(--pg-ink);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.page__actions .btn-ghost:hover {
+  background: #f9fafb;
+  border-color: #d0d5dd;
+}
+
 .btn-primary {
   display: inline-flex;
   align-items: center;
@@ -375,6 +403,8 @@
   align-items: center;
   padding: 0.2rem 0.6rem;
   border-radius: 999px;
+  background: #f2f4f7;
+  color: #475467;
   font-size: 0.7rem;
   font-weight: 700;
 }

@@ -77,7 +77,8 @@ export class Login {
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
-        next: () => void this.router.navigateByUrl('/dashboard'),
+        next: (user) =>
+          void this.router.navigateByUrl(user.passwordExpired ? '/settings' : '/dashboard'),
         error: (error: ApiError) => this.formError.set(error.message),
       });
   }

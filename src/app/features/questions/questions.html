@@ -1,0 +1,452 @@
+<section class="page">
+  <header class="page__head">
+    <div>
+      <h1>Question bank</h1>
+      <p>Curate questions by chapter, type, difficulty and marks for paper generation.</p>
+    </div>
+    @if (canManage()) {
+      <a class="btn-primary" routerLink="/questions/new" data-testid="add-question">
+        <app-icon name="plus" />
+        Add question
+      </a>
+    }
+  </header>
+
+  @if (summary(); as summary) {
+    <div class="stats">
+      <div class="stat">
+        <span class="stat__value">{{ summary.total }}</span>
+        <span class="stat__label">Questions</span>
+      </div>
+      <div class="stat">
+        <span class="stat__value">{{ summary.active }}</span>
+        <span class="stat__label">Active</span>
+      </div>
+      <div class="stat">
+        <span class="stat__value">{{ summary.inactive }}</span>
+        <span class="stat__label">Inactive</span>
+      </div>
+      <div class="stat">
+        <span class="stat__value">{{ summary.deleted }}</span>
+        <span class="stat__label">Deleted</span>
+      </div>
+    </div>
+  }
+
+  <section class="card">
+    @if (notice(); as notice) {
+      <p class="action-notice action-notice--success" role="status" data-testid="notice">
+        <app-icon name="check" />
+        <span class="notice-body">{{ notice }}</span>
+        <button type="button" class="notice-dismiss" (click)="dismissNotice()">
+          <app-icon name="x" />
+          <span class="sr-only">Dismiss</span>
+        </button>
+      </p>
+    }
+
+    @if (actionError(); as actionError) {
+      <p class="action-error" role="alert" data-testid="action-error">
+        <app-icon name="alert-circle" />
+        {{ actionError }}
+      </p>
+    }
+
+    @if (mastersError(); as mastersError) {
+      <p class="action-error" role="alert">
+        <app-icon name="alert-circle" />
+        {{ mastersError }}
+      </p>
+    }
+
+    <div class="toolbar">
+      <label class="search">
+        <app-icon name="search" />
+        <input
+          type="search"
+          data-testid="question-search"
+          placeholder="Search questions, answers or tags&hellip;"
+          aria-label="Search questions"
+          [value]="query()"
+          (input)="onSearch($any($event.target).value)"
+        />
+      </label>
+
+      <div class="filters" role="group" aria-label="Filter by status">
+        @for (status of statuses; track status) {
+          <button
+            type="button"
+            class="filter-chip"
+            [class.is-active]="statusFilter() === status"
+            [attr.data-status]="status"
+            [attr.aria-pressed]="statusFilter() === status"
+            (click)="setStatus(status)"
+          >
+            {{ status }}
+          </button>
+        }
+      </div>
+
+      <label class="toggle">
+        <input
+          type="checkbox"
+          data-testid="show-deleted"
+          [checked]="includeDeleted()"
+          (change)="toggleDeleted($any($event.target).checked)"
+        />
+        <span>Show deleted</span>
+      </label>
+    </div>
+
+    <div class="filter-grid" data-testid="question-filters">
+      <label class="field">
+        <span class="field__label">Medium</span>
+        <select
+          data-testid="medium-filter"
+          [value]="mediumFilter()"
+          (change)="setMediumFilter($any($event.target).value)"
+        >
+          <option value="all">All mediums</option>
+          @for (medium of mediums(); track medium.id) {
+            <option [value]="medium.id">{{ medium.name }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="field">
+        <span class="field__label">Standard</span>
+        <select
+          data-testid="standard-filter"
+          [value]="standardFilter()"
+          (change)="setStandardFilter($any($event.target).value)"
+        >
+          <option value="all">All standards</option>
+          @for (standard of standardOptions(); track standard.id) {
+            <option [value]="standard.id">{{ standard.name }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="field">
+        <span class="field__label">Subject</span>
+        <select
+          data-testid="subject-filter"
+          [value]="subjectFilter()"
+          (change)="setSubjectFilter($any($event.target).value)"
+        >
+          <option value="all">All subjects</option>
+          @for (subject of subjectOptions(); track subject.id) {
+            <option [value]="subject.id">{{ subject.name }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="field">
+        <span class="field__label">Chapter</span>
+        <select
+          data-testid="chapter-filter"
+          [value]="chapterFilter()"
+          (change)="setChapterFilter($any($event.target).value)"
+        >
+          <option value="all">All chapters</option>
+          @for (chapter of chapterOptions(); track chapter.id) {
+            <option [value]="chapter.id">{{ chapter.name }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="field">
+        <span class="field__label">Topic</span>
+        <select
+          data-testid="topic-filter"
+          [value]="topicFilter()"
+          [disabled]="chapterFilter() === 'all' || topicsLoading()"
+          (change)="setTopicFilter($any($event.target).value)"
+        >
+          <option value="all">
+            {{ topicsLoading() ? 'Loading topics&hellip;' : 'All topics' }}
+          </option>
+          @for (topic of topics(); track topic.id) {
+            <option [value]="topic.id">{{ topic.name }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="field">
+        <span class="field__label">Type</span>
+        <select
+          data-testid="type-filter"
+          [value]="questionTypeFilter()"
+          (change)="setQuestionTypeFilter($any($event.target).value)"
+        >
+          <option value="all">All types</option>
+          @for (type of questionTypes(); track type.id) {
+            <option [value]="type.id">{{ type.name }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="field">
+        <span class="field__label">Difficulty</span>
+        <select
+          data-testid="difficulty-filter"
+          [value]="difficultyFilter()"
+          (change)="setDifficultyFilter($any($event.target).value)"
+        >
+          <option value="all">All levels</option>
+          @for (level of difficultyLevels(); track level.id) {
+            <option [value]="level.id">{{ level.name }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="field">
+        <span class="field__label">Bloom</span>
+        <select
+          data-testid="bloom-filter"
+          [value]="bloomFilter()"
+          (change)="setBloomFilter($any($event.target).value)"
+        >
+          <option value="all">All levels</option>
+          @for (level of bloomLevels(); track level.id) {
+            <option [value]="level.id">{{ level.name }}</option>
+          }
+        </select>
+      </label>
+
+      @if (hasFilters()) {
+        <button type="button" class="btn-ghost filter-clear" (click)="clearFilters()">
+          Clear filters
+        </button>
+      }
+    </div>
+
+    @if (loading()) {
+      <div class="state" role="status">
+        <span class="spinner" aria-hidden="true"></span>
+        <p>Loading questions&hellip;</p>
+      </div>
+    } @else if (error(); as error) {
+      <div class="state state--error" role="alert">
+        <app-icon name="alert-circle" />
+        <p>{{ error }}</p>
+        <button type="button" class="btn-ghost" (click)="load()">Try again</button>
+      </div>
+    } @else if (rows().length > 0) {
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>
+                <button type="button" class="th-sort" data-sort="text" (click)="sortBy('text')">
+                  Question
+                  @if (sort() === 'text') {
+                    <app-icon
+                      name="chevron-down"
+                      class="th-sort__icon"
+                      [class.is-asc]="dir() === 'asc'"
+                    />
+                  }
+                </button>
+              </th>
+              <th>Location</th>
+              <th>Type</th>
+              <th>Difficulty</th>
+              <th>
+                <button type="button" class="th-sort" data-sort="marks" (click)="sortBy('marks')">
+                  Marks
+                  @if (sort() === 'marks') {
+                    <app-icon
+                      name="chevron-down"
+                      class="th-sort__icon"
+                      [class.is-asc]="dir() === 'asc'"
+                    />
+                  }
+                </button>
+              </th>
+              <th>Status</th>
+              <th>
+                <button
+                  type="button"
+                  class="th-sort"
+                  data-sort="updatedAt"
+                  (click)="sortBy('updatedAt')"
+                >
+                  Updated
+                  @if (sort() === 'updatedAt') {
+                    <app-icon
+                      name="chevron-down"
+                      class="th-sort__icon"
+                      [class.is-asc]="dir() === 'asc'"
+                    />
+                  }
+                </button>
+              </th>
+              <th aria-label="Actions"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (question of rows(); track question.id) {
+              <tr
+                [attr.data-question]="question.text"
+                [class.is-deleted]="question.deletedAt !== null"
+              >
+                <td class="question-cell">
+                  <a class="question-text" [routerLink]="['/questions', question.id]">
+                    {{ displayText(question.text) }}
+                  </a>
+                  <span class="question-meta">
+                    @if (question.optionCount > 0) {
+                      {{ question.optionCount }} options
+                    } @else {
+                      Written answer
+                    }
+                    <span class="meta-dot"></span>
+                    {{ question.hasAnswer ? 'Answer key ready' : 'No answer key' }}
+                  </span>
+                </td>
+                <td>
+                  <span class="standard-cell">
+                    <span class="standard-cell__name">{{ questionLocation(question) }}</span>
+                    <span class="medium-cell">{{ lineageLabel(question) }}</span>
+                  </span>
+                </td>
+                <td>{{ question.questionTypeName }}</td>
+                <td>
+                  <span class="standard-cell standard-cell--stacked">
+                    <span class="standard-cell__name">{{ question.difficultyLevelName }}</span>
+                    @if (question.bloomLevelName !== null) {
+                      <span class="medium-cell">{{ question.bloomLevelName }}</span>
+                    }
+                  </span>
+                </td>
+                <td>{{ question.marks }}</td>
+                <td>
+                  <span [class]="'pill pill--' + question.status">{{ question.status }}</span>
+                </td>
+                <td>{{ dateLabel(question.updatedAt) }}</td>
+                <td class="row-actions">
+                  <a class="btn-ghost" [routerLink]="['/questions', question.id]">View</a>
+                  @if (question.deletedAt !== null) {
+                    @if (canManage()) {
+                      <button
+                        type="button"
+                        class="btn-ghost"
+                        [disabled]="busyId() === question.id"
+                        data-action="restore"
+                        (click)="restore(question)"
+                      >
+                        @if (busyId() === question.id) {
+                          Working&hellip;
+                        } @else {
+                          Restore
+                        }
+                      </button>
+                    } @else {
+                      <span class="deleted-tag">Deleted</span>
+                    }
+                  } @else if (canManage()) {
+                    @if (confirmId() === question.id) {
+                      <span class="confirm">
+                        <span class="confirm__text">Delete this question?</span>
+                        <button
+                          type="button"
+                          class="btn-ghost btn-ghost--danger"
+                          [disabled]="busyId() === question.id"
+                          data-action="confirm-delete"
+                          (click)="confirmDelete(question)"
+                        >
+                          Confirm
+                        </button>
+                        <button type="button" class="btn-ghost" (click)="cancelDelete()">
+                          Cancel
+                        </button>
+                      </span>
+                    } @else {
+                      <a
+                        class="btn-ghost"
+                        [routerLink]="['/questions', question.id, 'edit']"
+                        data-action="edit"
+                      >
+                        Edit
+                      </a>
+                      <button
+                        type="button"
+                        class="btn-ghost"
+                        [disabled]="busyId() === question.id"
+                        [attr.data-action]="
+                          question.status === 'active' ? 'deactivate' : 'activate'
+                        "
+                        (click)="toggleStatus(question)"
+                      >
+                        {{ question.status === 'active' ? 'Deactivate' : 'Activate' }}
+                      </button>
+                      <button
+                        type="button"
+                        class="btn-ghost btn-ghost--danger"
+                        [disabled]="busyId() === question.id"
+                        data-action="delete"
+                        (click)="requestDelete(question)"
+                      >
+                        Delete
+                      </button>
+                    }
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <footer class="pager">
+        <p class="pager__range">
+          Showing {{ rangeStart() }}-{{ rangeEnd() }} of {{ total() }} questions
+        </p>
+        <label class="select select--compact">
+          <span class="sr-only">Rows per page</span>
+          <select
+            data-testid="page-size"
+            [value]="pageSize()"
+            (change)="setPageSize($any($event.target).value)"
+          >
+            @for (size of pageSizes; track size) {
+              <option [value]="size">{{ size }} / page</option>
+            }
+          </select>
+        </label>
+        <div class="pager__buttons">
+          <button
+            type="button"
+            class="btn-ghost"
+            data-action="prev-page"
+            [disabled]="page() <= 1"
+            (click)="goToPage(page() - 1)"
+          >
+            Previous
+          </button>
+          <span class="pager__page">Page {{ page() }} of {{ pageCount() }}</span>
+          <button
+            type="button"
+            class="btn-ghost"
+            data-action="next-page"
+            [disabled]="page() >= pageCount()"
+            (click)="goToPage(page() + 1)"
+          >
+            Next
+          </button>
+        </div>
+      </footer>
+    } @else if (hasFilters()) {
+      <div class="empty">
+        <app-icon name="search" />
+        <p>No questions match your filters.</p>
+      </div>
+    } @else {
+      <div class="empty">
+        <app-icon name="help-circle" />
+        <p>No questions yet. Add your first question to start building the bank.</p>
+      </div>
+    }
+  </section>
+</section>

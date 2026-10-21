@@ -11,15 +11,22 @@ import {
   adminGuestGuard,
   authGuard,
   guestGuard,
-  schoolAdminGuard,
+  passwordExpiredGuard,
+  permissionGuard,
 } from './auth.guard';
 import { AuthService } from './auth.service';
 
 const SNAPSHOT = {} as ActivatedRouteSnapshot;
-const STATE = {} as RouterStateSnapshot;
+const STATE = { url: '/dashboard' } as RouterStateSnapshot;
 
 describe('auth guards', () => {
-  function configure(signedIn: boolean, adminSignedIn: boolean, role = 'teacher'): void {
+  function configure(
+    signedIn: boolean,
+    adminSignedIn: boolean,
+    role = 'teacher',
+    permissions: string[] = [],
+    passwordExpired = false,
+  ): void {
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
@@ -27,7 +34,9 @@ describe('auth guards', () => {
           provide: AuthService,
           useValue: {
             isAuthenticated: () => signedIn,
-            user: () => (signedIn ? { id: 'u1', role } : null),
+            user: () => (signedIn ? { id: 'u1', role, permissions } : null),
+            can: (permission: string) => signedIn && permissions.includes(permission),
+            passwordExpired: () => signedIn && passwordExpired,
           },
         },
         { provide: AdminAuthService, useValue: { isAuthenticated: () => adminSignedIn } },
@@ -89,17 +98,51 @@ describe('auth guards', () => {
     );
   });
 
-  it('schoolAdminGuard lets school admins manage users', () => {
-    configure(true, false, 'school_admin');
+  it('permissionGuard lets users with the required permission through', () => {
+    configure(true, false, 'teacher', ['users.manage']);
 
-    expect(TestBed.runInInjectionContext(() => schoolAdminGuard(SNAPSHOT, STATE))).toBe(true);
+    expect(
+      TestBed.runInInjectionContext(() => permissionGuard('users.manage')(SNAPSHOT, STATE)),
+    ).toBe(true);
   });
 
-  it('schoolAdminGuard sends everyone else to /dashboard', () => {
-    configure(true, false, 'teacher');
+  it('permissionGuard sends users without the permission to /dashboard', () => {
+    configure(true, false, 'teacher', ['questions.view']);
 
-    expect(urlOf(TestBed.runInInjectionContext(() => schoolAdminGuard(SNAPSHOT, STATE)))).toBe(
-      '/dashboard',
+    expect(
+      urlOf(TestBed.runInInjectionContext(() => permissionGuard('users.manage')(SNAPSHOT, STATE))),
+    ).toBe('/dashboard');
+  });
+
+  it('permissionGuard sends guests to /dashboard', () => {
+    configure(false, false);
+
+    expect(
+      urlOf(TestBed.runInInjectionContext(() => permissionGuard('roles.view')(SNAPSHOT, STATE))),
+    ).toBe('/dashboard');
+  });
+
+  it('passwordExpiredGuard lets users with a current password through', () => {
+    configure(true, false);
+
+    expect(TestBed.runInInjectionContext(() => passwordExpiredGuard(SNAPSHOT, STATE))).toBe(true);
+  });
+
+  it('passwordExpiredGuard sends users with an expired password to /settings', () => {
+    configure(true, false, 'teacher', [], true);
+
+    expect(urlOf(TestBed.runInInjectionContext(() => passwordExpiredGuard(SNAPSHOT, STATE)))).toBe(
+      '/settings',
     );
+  });
+
+  it('passwordExpiredGuard lets expired users stay on /settings', () => {
+    configure(true, false, 'teacher', [], true);
+
+    expect(
+      TestBed.runInInjectionContext(() =>
+        passwordExpiredGuard(SNAPSHOT, { url: '/settings' } as RouterStateSnapshot),
+      ),
+    ).toBe(true);
   });
 });

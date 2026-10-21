@@ -1,0 +1,152 @@
+<section class="page">
+  <header class="page__head">
+    <div>
+      <h1>Profile &amp; settings</h1>
+      <p>Review your school profile and keep your account secure.</p>
+    </div>
+  </header>
+
+  @if (passwordExpired()) {
+    <p class="alert alert--warn" role="alert" data-testid="password-expired">
+      <app-icon name="alert-circle" />
+      <span>
+        Your password has expired. Choose a new password below to keep using the school panel.
+      </span>
+    </p>
+  }
+
+  @if (notice(); as notice) {
+    <p class="alert alert--success" role="status" data-testid="password-notice">
+      <app-icon name="check" />
+      <span>{{ notice }}</span>
+    </p>
+  }
+
+  <div class="settings-layout">
+    <div class="settings-layout__side">
+      @if (canViewSchool()) {
+        <section class="card">
+          <header class="card__head">
+            <h2>School profile</h2>
+            <p>The school connected to your account.</p>
+          </header>
+          <dl class="meta">
+            <div class="meta__row">
+              <dt>School</dt>
+              <dd data-testid="school-name">{{ user()?.tenantName ?? 'Not set' }}</dd>
+            </div>
+          </dl>
+        </section>
+      }
+
+      <section class="card">
+        <header class="card__head">
+          <h2>Your account</h2>
+          <p>Details from your signed-in profile.</p>
+        </header>
+        <dl class="meta">
+          <div class="meta__row">
+            <dt>Name</dt>
+            <dd data-testid="account-name">{{ user()?.name }}</dd>
+          </div>
+          <div class="meta__row">
+            <dt>Email</dt>
+            <dd data-testid="account-email">{{ user()?.email }}</dd>
+          </div>
+          <div class="meta__row">
+            <dt>Role</dt>
+            <dd data-testid="account-role">{{ role() }}</dd>
+          </div>
+        </dl>
+      </section>
+    </div>
+
+    <section class="card card--form">
+      <header class="card__head">
+        <h2>Change password</h2>
+        <p>Use at least 8 characters and pick something different from your current one.</p>
+      </header>
+
+      @if (formError(); as formError) {
+        <p class="alert" role="alert" data-testid="password-error">
+          <app-icon name="alert-circle" />
+          <span>{{ formError }}</span>
+        </p>
+      }
+
+      <form class="form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <label class="field">
+          <span class="field__label">Current password</span>
+          <span class="field__control">
+            <input
+              [type]="showPasswords() ? 'text' : 'password'"
+              class="field__input"
+              [class.is-invalid]="isInvalid('currentPassword')"
+              formControlName="currentPassword"
+              autocomplete="current-password"
+              data-testid="current-password"
+            />
+            <button
+              type="button"
+              class="field__toggle"
+              [attr.aria-label]="showPasswords() ? 'Hide passwords' : 'Show passwords'"
+              (click)="togglePasswords()"
+            >
+              <app-icon [name]="showPasswords() ? 'eye-off' : 'eye'" />
+            </button>
+          </span>
+          @if (errorFor('currentPassword'); as message) {
+            <span class="field__error">{{ message }}</span>
+          }
+        </label>
+
+        <label class="field">
+          <span class="field__label">New password</span>
+          <input
+            [type]="showPasswords() ? 'text' : 'password'"
+            class="field__input"
+            [class.is-invalid]="isInvalid('newPassword')"
+            formControlName="newPassword"
+            autocomplete="new-password"
+            data-testid="new-password"
+          />
+          @if (errorFor('newPassword'); as message) {
+            <span class="field__error">{{ message }}</span>
+          }
+        </label>
+
+        <label class="field">
+          <span class="field__label">Confirm new password</span>
+          <input
+            [type]="showPasswords() ? 'text' : 'password'"
+            class="field__input"
+            [class.is-invalid]="isInvalid('confirmPassword')"
+            formControlName="confirmPassword"
+            autocomplete="new-password"
+            data-testid="confirm-password"
+          />
+          @if (errorFor('confirmPassword'); as message) {
+            <span class="field__error">{{ message }}</span>
+          }
+        </label>
+
+        <div class="form__actions">
+          <button
+            type="submit"
+            class="btn-primary"
+            data-testid="change-password"
+            [disabled]="submitting()"
+          >
+            @if (submitting()) {
+              <span class="spinner" aria-hidden="true"></span>
+              Saving&hellip;
+            } @else {
+              <app-icon name="shield" />
+              Update password
+            }
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+</section>

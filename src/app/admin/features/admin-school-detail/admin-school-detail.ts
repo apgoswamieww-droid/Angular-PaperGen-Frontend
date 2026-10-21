@@ -17,6 +17,7 @@ import type {
   AdminSchoolDetailResult,
   AdminSchoolUser,
   BillingCycle,
+  MasterSeedResult,
   ResendInviteResult,
   ResetPasswordSendResult,
   SubscriptionStatus,
@@ -88,6 +89,8 @@ export class AdminSchoolDetail {
   protected readonly resent = signal<ResendInviteResult | null>(null);
   protected readonly resetting = signal(false);
   protected readonly resetLink = signal<ResetPasswordSendResult | null>(null);
+  protected readonly seeding = signal(false);
+  protected readonly seedResult = signal<MasterSeedResult | null>(null);
   protected readonly saved = signal(this.route.snapshot.queryParamMap.get('saved') === '1');
 
   private readonly plans = signal<AdminPlan[]>([]);
@@ -196,6 +199,7 @@ export class AdminSchoolDetail {
     this.actionError.set(null);
     this.resent.set(null);
     this.resetLink.set(null);
+    this.seedResult.set(null);
 
     this.adminSchools
       .resendInvite(school.id)
@@ -223,6 +227,7 @@ export class AdminSchoolDetail {
     this.actionError.set(null);
     this.resent.set(null);
     this.resetLink.set(null);
+    this.seedResult.set(null);
 
     this.adminSchools
       .resetPassword(school.id)
@@ -237,6 +242,55 @@ export class AdminSchoolDetail {
         },
         error: (error: unknown) => this.actionError.set(this.messageOf(error)),
       });
+  }
+
+  protected seedMasterData(): void {
+    const school = this.school();
+
+    if (school === null || this.seeding()) {
+      return;
+    }
+
+    this.seeding.set(true);
+    this.actionError.set(null);
+    this.resent.set(null);
+    this.resetLink.set(null);
+    this.seedResult.set(null);
+
+    this.adminSchools
+      .seedMasterData(school.id)
+      .pipe(
+        finalize(() => this.seeding.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (result) => {
+          this.seedResult.set(result);
+          this.load(true);
+        },
+        error: (error: unknown) => this.actionError.set(this.messageOf(error)),
+      });
+  }
+
+  protected seedSummary(result: MasterSeedResult): string {
+    const created =
+      result.mediums.created +
+      result.standards.created +
+      result.subjects.created +
+      result.chapters.created +
+      result.topics.created;
+    const reused =
+      result.mediums.reused +
+      result.standards.reused +
+      result.subjects.reused +
+      result.chapters.reused +
+      result.topics.reused;
+
+    if (created === 0) {
+      return `Master data was already up to date. ${reused} records reused.`;
+    }
+
+    return `Master data seeded: ${result.mediums.created} mediums, ${result.standards.created} standards, ${result.subjects.created} subjects, ${result.chapters.created} chapters and ${result.topics.created} topics created; ${reused} existing records reused.`;
   }
 
   protected openBilling(): void {

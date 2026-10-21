@@ -144,6 +144,21 @@ export interface ResendInviteResult {
   sent: boolean;
 }
 
+export interface MasterSeedCount {
+  created: number;
+  reused: number;
+}
+
+export interface MasterSeedResult {
+  schoolId: string;
+  mediums: MasterSeedCount;
+  standards: MasterSeedCount;
+  subjects: MasterSeedCount;
+  chapters: MasterSeedCount;
+  topics: MasterSeedCount;
+  durationMs: number;
+}
+
 export type ResetPasswordSendResult =
   | { kind: 'reset'; email: string; sent: boolean; expiresInMinutes: number }
   | { kind: 'invite'; email: string; sent: boolean; expiresInHours: number };

@@ -8,7 +8,21 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 export function roleLabel(role: string | undefined, fallback: string): string {
-  return (role && ROLE_LABELS[role]) || fallback;
+  if (!role) {
+    return fallback;
+  }
+
+  if (ROLE_LABELS[role]) {
+    return ROLE_LABELS[role];
+  }
+
+  const words = role.split(/[_\s-]+/).filter(Boolean);
+
+  if (words.length === 0) {
+    return fallback;
+  }
+
+  return words.map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
 }
 
 export function initialsFor(name: string | undefined, fallback: string): string {

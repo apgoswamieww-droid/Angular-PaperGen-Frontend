@@ -11,6 +11,7 @@ const USER: SchoolUserRecord = {
   email: 'teacher@greenwood.test',
   phone: '+91 90000 00000',
   role: 'teacher',
+  studentProfile: null,
   status: 'active',
   lastLoginAt: null,
   createdAt: '2026-10-18T10:00:00.000Z',
@@ -171,5 +172,57 @@ describe('SchoolUsersService', () => {
     request.flush(null);
 
     await expect(result).resolves.toBeNull();
+  });
+
+  it('downloads the import template as binary data', async () => {
+    const result = firstValueFrom(service.importTemplate());
+    const content = new ArrayBuffer(8);
+
+    const request = httpMock.expectOne('/api/users/import-template');
+    expect(request.request.method).toBe('GET');
+    expect(request.request.responseType).toBe('arraybuffer');
+    request.flush(content);
+
+    await expect(result).resolves.toBe(content);
+  });
+
+  it('posts a CSV payload for bulk import', async () => {
+    const payload = 'first_name,surname\nEsha,Kulkarni\n';
+    const result = firstValueFrom(service.importStudents(payload));
+
+    const request = httpMock.expectOne('/api/users/import');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ csv: payload });
+    request.flush({
+      total: 1,
+      created: 1,
+      failed: 0,
+      results: [
+        {
+          row: 1,
+          status: 'created',
+          name: 'Esha Kulkarni',
+          email: '',
+          password: 'Abcd@1234wxyz',
+          error: null,
+        },
+      ],
+    });
+
+    await expect(result).resolves.toEqual({
+      total: 1,
+      created: 1,
+      failed: 0,
+      results: [
+        {
+          row: 1,
+          status: 'created',
+          name: 'Esha Kulkarni',
+          email: '',
+          password: 'Abcd@1234wxyz',
+          error: null,
+        },
+      ],
+    });
   });
 });
