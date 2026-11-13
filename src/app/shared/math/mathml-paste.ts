@@ -21,8 +21,11 @@ export async function mathTextFromHtml(html: string): Promise<string | null> {
       latex = '';
     }
 
+    const display = formula.getAttribute('display') === 'block';
+    const delimited = display ? `$$${latex}$$` : `$${latex}$`;
+
     formula.replaceWith(
-      document.createTextNode(latex === '' ? (formula.textContent ?? '') : `$${latex}$`),
+      document.createTextNode(latex === '' ? (formula.textContent ?? '') : delimited),
     );
   }
 

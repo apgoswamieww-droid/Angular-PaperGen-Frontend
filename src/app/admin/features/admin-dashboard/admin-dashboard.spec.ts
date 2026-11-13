@@ -42,6 +42,10 @@ const PLANS: AdminPlan[] = [
   },
 ];
 
+function daysAgo(days: number): string {
+  return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+}
+
 const SCHOOLS: AdminSchoolSummary[] = [
   {
     id: 's1',
@@ -54,7 +58,7 @@ const SCHOOLS: AdminSchoolSummary[] = [
     status: 'active',
     brandColor: '#047857',
     userCount: 1240,
-    createdAt: '2026-10-01T10:00:00.000Z',
+    createdAt: daysAgo(20),
     billingCycle: 'annual',
     subscriptionStatus: 'active',
     renewalAt: '2027-03-01T10:00:00.000Z',
@@ -72,7 +76,7 @@ const SCHOOLS: AdminSchoolSummary[] = [
     status: 'active',
     brandColor: '#73113a',
     userCount: 512,
-    createdAt: '2026-08-01T10:00:00.000Z',
+    createdAt: daysAgo(90),
     billingCycle: 'monthly',
     subscriptionStatus: 'active',
     renewalAt: '2026-11-01T10:00:00.000Z',
@@ -90,7 +94,7 @@ const SCHOOLS: AdminSchoolSummary[] = [
     status: 'active',
     brandColor: '#0f172a',
     userCount: 96,
-    createdAt: '2026-10-08T10:00:00.000Z',
+    createdAt: daysAgo(5),
     billingCycle: 'monthly',
     subscriptionStatus: 'trial',
     renewalAt: null,
@@ -108,7 +112,7 @@ const SCHOOLS: AdminSchoolSummary[] = [
     status: 'suspended',
     brandColor: '#1d4ed8',
     userCount: 210,
-    createdAt: '2026-10-12T10:00:00.000Z',
+    createdAt: daysAgo(1),
     billingCycle: 'monthly',
     subscriptionStatus: 'cancelled',
     renewalAt: null,

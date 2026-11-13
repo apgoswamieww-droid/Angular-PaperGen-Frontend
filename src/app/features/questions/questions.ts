@@ -437,7 +437,7 @@ export class Questions {
       this.dir.update((dir) => (dir === 'asc' ? 'desc' : 'asc'));
     } else {
       this.sort.set(field);
-      this.dir.set(field === 'text' || field === 'marks' ? 'asc' : 'desc');
+      this.dir.set(field === 'text' ? 'asc' : 'desc');
     }
 
     this.page.set(1);

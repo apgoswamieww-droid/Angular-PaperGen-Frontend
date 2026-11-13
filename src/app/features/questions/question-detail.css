@@ -637,6 +637,18 @@
 .option-item.is-correct {
   border-color: #86efac;
   background: #f0fdf4;
+  box-shadow: inset 3px 0 0 #16a34a;
+}
+
+.option-item.is-correct .option-key {
+  border-color: #16a34a;
+  background: #16a34a;
+  color: #fff;
+}
+
+.option-item.is-correct .option-body {
+  color: #14532d;
+  font-weight: 600;
 }
 
 .option-key {
@@ -665,6 +677,9 @@
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: #dcfce7;
   color: #15803d;
   font-size: 0.75rem;
   font-weight: 700;

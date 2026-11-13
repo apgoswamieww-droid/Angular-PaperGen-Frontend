@@ -135,7 +135,6 @@ const QUESTIONS: QuestionListItem[] = [
   {
     id: 'q1',
     text: 'What is 2 + 2?',
-    marks: 1,
     status: 'active',
     chapterId: 'ch1',
     chapterName: 'Number System',
@@ -162,7 +161,6 @@ const QUESTIONS: QuestionListItem[] = [
   {
     id: 'q2',
     text: 'Explain the water cycle.',
-    marks: 5,
     status: 'inactive',
     chapterId: 'ch1',
     chapterName: 'Number System',

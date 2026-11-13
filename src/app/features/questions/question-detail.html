@@ -55,7 +55,6 @@
       <div class="detail-hero__body">
         <div class="badge-row">
           <span [class]="'pill pill--' + question.status">{{ question.status }}</span>
-          <span class="pill pill--neutral">{{ question.marks }} marks</span>
           <span class="pill pill--neutral">{{ question.questionTypeName }}</span>
         </div>
         <p class="question-prompt" data-testid="question-prompt">
@@ -130,6 +129,42 @@
       }
     </section>
 
+    <section class="card detail-card" data-testid="question-options">
+      <div class="section-head">
+        <div>
+          <h2>Options</h2>
+          <p>Correct options are highlighted below.</p>
+        </div>
+        @if (correctOptions().length > 0) {
+          <span class="pill pill--correct"> {{ correctOptions().length }} correct </span>
+        }
+      </div>
+
+      @if (question.options.length > 0) {
+        <ol class="option-list">
+          @for (option of question.options; track $index) {
+            <li class="option-item" [class.is-correct]="option.isCorrect">
+              <span class="option-key">{{ optionLabel(option) }}</span>
+              <span class="option-body">
+                <app-math-content [content]="option.text" />
+              </span>
+              @if (option.isCorrect) {
+                <span class="correct-tag">
+                  <app-icon name="check" />
+                  Correct answer
+                </span>
+              }
+            </li>
+          }
+        </ol>
+      } @else {
+        <div class="empty empty--compact">
+          <app-icon name="list" />
+          <p>No options. This is a written-answer question.</p>
+        </div>
+      }
+    </section>
+
     <div class="detail-grid">
       <section class="card detail-card">
         <h2>Classification</h2>
@@ -177,24 +212,12 @@
             <dd>{{ question.status }}</dd>
           </div>
           <div>
-            <dt>Marks</dt>
-            <dd>{{ question.marks }}</dd>
-          </div>
-          <div>
             <dt>Options</dt>
             <dd>{{ question.options.length }}</dd>
           </div>
           <div>
             <dt>Answer key</dt>
             <dd>{{ question.hasAnswer ? 'Ready' : 'Missing' }}</dd>
-          </div>
-          <div>
-            <dt>Created</dt>
-            <dd>{{ dateLabel(question.createdAt) }}</dd>
-          </div>
-          <div>
-            <dt>Updated</dt>
-            <dd>{{ dateLabel(question.updatedAt) }}</dd>
           </div>
           <div>
             <dt>Source</dt>
@@ -217,42 +240,6 @@
         </dl>
       </section>
     </div>
-
-    <section class="card detail-card">
-      <div class="section-head">
-        <div>
-          <h2>Options</h2>
-          <p>Correct options are marked for the answer key.</p>
-        </div>
-        @if (correctOptions().length > 0) {
-          <span class="pill pill--correct"> {{ correctOptions().length }} correct </span>
-        }
-      </div>
-
-      @if (question.options.length > 0) {
-        <ol class="option-list">
-          @for (option of question.options; track $index) {
-            <li class="option-item" [class.is-correct]="option.isCorrect">
-              <span class="option-key">{{ optionLabel(option) }}</span>
-              <span class="option-body">
-                <app-math-content [content]="option.text" />
-              </span>
-              @if (option.isCorrect) {
-                <span class="correct-tag">
-                  <app-icon name="check" />
-                  Correct
-                </span>
-              }
-            </li>
-          }
-        </ol>
-      } @else {
-        <div class="empty empty--compact">
-          <app-icon name="list" />
-          <p>No options. This is a written-answer question.</p>
-        </div>
-      }
-    </section>
 
     <section class="card detail-card">
       <h2>Answer &amp; explanation</h2>
@@ -278,6 +265,34 @@
           </p>
         }
       </div>
+    </section>
+
+    <section class="card detail-card" data-testid="question-audit">
+      <div class="section-head">
+        <div>
+          <h2>Audit trail</h2>
+          <p>Who created and last updated this question.</p>
+        </div>
+      </div>
+
+      <dl class="meta-list">
+        <div>
+          <dt>Created by</dt>
+          <dd>{{ question.createdByName ?? 'Not available' }}</dd>
+        </div>
+        <div>
+          <dt>Created at</dt>
+          <dd>{{ dateTimeLabel(question.createdAt) }}</dd>
+        </div>
+        <div>
+          <dt>Updated by</dt>
+          <dd>{{ question.updatedByName ?? 'Not available' }}</dd>
+        </div>
+        <div>
+          <dt>Updated at</dt>
+          <dd>{{ dateTimeLabel(question.updatedAt) }}</dd>
+        </div>
+      </dl>
     </section>
   } @else {
     <div class="state state--error" role="alert">

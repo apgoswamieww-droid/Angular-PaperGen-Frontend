@@ -169,7 +169,6 @@ const BLOOMS: BloomLevelRecord[] = [
 const QUESTION: QuestionRecord = {
   id: 'q1',
   text: 'What is 2 + 2?',
-  marks: 1,
   status: 'active',
   chapterId: 'ch1',
   chapterName: 'Number System',
@@ -201,7 +200,9 @@ const QUESTION: QuestionRecord = {
   source: 'Number workbook',
   tags: ['Numbers'],
   createdBy: 'u1',
+  createdByName: 'Asha Deshmukh',
   updatedBy: 'u1',
+  updatedByName: 'Asha Deshmukh',
 };
 
 const TOPICS_PAGE: TopicsPage = {
@@ -353,9 +354,6 @@ describe('QuestionForm', () => {
     expect(
       element().querySelector<HTMLSelectElement>('[data-testid="question-chapter"]')?.value,
     ).toBe('ch1');
-    expect(element().querySelector<HTMLInputElement>('[data-testid="question-marks"]')?.value).toBe(
-      '1',
-    );
 
     setInput('question-text', 'What is 2 + 2?');
     setInput('question-tags', 'numbers, Numbers, arithmetic');
@@ -391,7 +389,6 @@ describe('QuestionForm', () => {
       explanation: '',
       source: '',
       tags: ['numbers', 'arithmetic'],
-      marks: 1,
       status: 'active',
     });
 
@@ -401,6 +398,91 @@ describe('QuestionForm', () => {
     expect(navigate).toHaveBeenCalledWith(['/questions', 'q9'], {
       state: { notice: 'Question created.' },
     });
+  });
+
+  it('saves and keeps the classification when using Save & new', () => {
+    const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+
+    createForm();
+    flushMasters();
+    flushTopics();
+
+    setSelect('question-difficulty', 'd2');
+    setInput('question-text', 'What is 3 + 3?');
+    setInput('question-answer', '6');
+    setInput('question-tags', 'addition');
+
+    const inactive = element().querySelectorAll<HTMLInputElement>(
+      'input[type="radio"][formControlName="status"]',
+    )[1];
+
+    inactive?.click();
+    fixture.detectChanges();
+
+    element().querySelector<HTMLButtonElement>('[data-testid="save-and-new"]')?.click();
+    fixture.detectChanges();
+
+    const request = httpMock.expectOne(
+      (candidate) => candidate.url === '/api/questions' && candidate.method === 'POST',
+    );
+
+    expect(request.request.body).toMatchObject({
+      text: 'What is 3 + 3?',
+      chapterId: 'ch1',
+      topicId: null,
+      questionTypeId: 'qt1',
+      difficultyLevelId: 'd2',
+      bloomLevelId: 'b2',
+      answer: '6',
+      tags: ['addition'],
+      status: 'inactive',
+    });
+
+    request.flush({ ...QUESTION, id: 'q9' });
+    fixture.detectChanges();
+
+    expect(navigate).not.toHaveBeenCalled();
+    expect(element().querySelector('[data-testid="save-notice"]')?.textContent).toContain(
+      'Question created',
+    );
+
+    expect(
+      element().querySelector<HTMLSelectElement>('[data-testid="question-medium"]')?.value,
+    ).toBe('med1');
+    expect(
+      element().querySelector<HTMLSelectElement>('[data-testid="question-standard"]')?.value,
+    ).toBe('s1');
+    expect(
+      element().querySelector<HTMLSelectElement>('[data-testid="question-subject"]')?.value,
+    ).toBe('sub1');
+    expect(
+      element().querySelector<HTMLSelectElement>('[data-testid="question-chapter"]')?.value,
+    ).toBe('ch1');
+    expect(element().querySelector<HTMLSelectElement>('[data-testid="question-type"]')?.value).toBe(
+      'qt1',
+    );
+    expect(
+      element().querySelector<HTMLSelectElement>('[data-testid="question-difficulty"]')?.value,
+    ).toBe('d2');
+    expect(
+      element().querySelector<HTMLSelectElement>('[data-testid="question-bloom"]')?.value,
+    ).toBe('b2');
+
+    const statuses = element().querySelectorAll<HTMLInputElement>(
+      'input[type="radio"][formControlName="status"]',
+    );
+
+    expect(statuses[1]?.checked).toBe(true);
+    expect(
+      element().querySelector<HTMLTextAreaElement>('[data-testid="question-text"]')?.value,
+    ).toBe('');
+    expect(
+      element().querySelector<HTMLTextAreaElement>('[data-testid="question-answer"]')?.value,
+    ).toBe('');
+    expect(element().querySelector<HTMLInputElement>('[data-testid="question-tags"]')?.value).toBe(
+      '',
+    );
+    expect(element().querySelectorAll('.option-row').length).toBe(0);
   });
 
   it('loads an existing question and saves the changed fields', () => {
@@ -425,6 +507,7 @@ describe('QuestionForm', () => {
     expect(element().querySelector<HTMLInputElement>('[data-testid="question-tags"]')?.value).toBe(
       'Numbers',
     );
+    expect(element().querySelector('[data-testid="save-and-new"]')).toBeNull();
 
     setInput('question-text', 'What is 3 + 3?');
 
@@ -449,7 +532,6 @@ describe('QuestionForm', () => {
       explanation: 'Two plus two equals four.',
       source: 'Number workbook',
       tags: ['Numbers'],
-      marks: 1,
       status: 'active',
     });
 

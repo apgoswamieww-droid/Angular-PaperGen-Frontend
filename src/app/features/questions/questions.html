@@ -2,7 +2,7 @@
   <header class="page__head">
     <div>
       <h1>Question bank</h1>
-      <p>Curate questions by chapter, type, difficulty and marks for paper generation.</p>
+      <p>Curate questions by chapter, type and difficulty for paper generation.</p>
     </div>
     @if (canManage()) {
       <a class="btn-primary" routerLink="/questions/new" data-testid="add-question">
@@ -252,18 +252,6 @@
               <th>Location</th>
               <th>Type</th>
               <th>Difficulty</th>
-              <th>
-                <button type="button" class="th-sort" data-sort="marks" (click)="sortBy('marks')">
-                  Marks
-                  @if (sort() === 'marks') {
-                    <app-icon
-                      name="chevron-down"
-                      class="th-sort__icon"
-                      [class.is-asc]="dir() === 'asc'"
-                    />
-                  }
-                </button>
-              </th>
               <th>Status</th>
               <th>
                 <button
@@ -320,7 +308,6 @@
                     }
                   </span>
                 </td>
-                <td>{{ question.marks }}</td>
                 <td>
                   <span [class]="'pill pill--' + question.status">{{ question.status }}</span>
                 </td>

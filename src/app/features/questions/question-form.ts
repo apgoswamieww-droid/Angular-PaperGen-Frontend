@@ -48,6 +48,8 @@ interface OptionControls {
 
 type OptionForm = FormGroup<OptionControls>;
 
+type SaveMode = 'redirect' | 'new';
+
 interface MasterData {
   mediums: MediumRecord[];
   standards: StandardRecord[];
@@ -65,7 +67,6 @@ interface PreviewOption {
 
 interface QuestionPreview {
   text: string;
-  marks: number | null;
   options: PreviewOption[];
 }
 
@@ -121,13 +122,14 @@ export class QuestionForm {
 
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
+  protected readonly savingMode = signal<SaveMode | null>(null);
   protected readonly loadError = signal<string | null>(null);
   protected readonly saveError = signal<string | null>(null);
+  protected readonly saveNotice = signal<string | null>(null);
   protected readonly topicsLoading = signal(false);
   protected readonly topicsError = signal<string | null>(null);
   protected readonly preview = signal<QuestionPreview>({
     text: '',
-    marks: 1,
     options: [],
   });
   protected readonly ocrBusy = signal(false);
@@ -207,9 +209,6 @@ export class QuestionForm {
       validators: [Validators.maxLength(200)],
     }),
     tags: new FormControl('', { nonNullable: true }),
-    marks: new FormControl<number | null>(1, {
-      validators: [requiredValidator, Validators.min(0.5), Validators.max(100)],
-    }),
     status: new FormControl<QuestionStatus>('active', { nonNullable: true }),
   });
 
@@ -327,8 +326,7 @@ export class QuestionForm {
       | 'difficultyLevelId'
       | 'answer'
       | 'explanation'
-      | 'source'
-      | 'marks',
+      | 'source',
   ): boolean {
     const field = this.form.controls[control];
 
@@ -506,12 +504,13 @@ export class QuestionForm {
     this.ocrError.set(null);
   }
 
-  protected save(): void {
+  protected save(mode: SaveMode = 'redirect'): void {
     if (this.saving()) {
       return;
     }
 
     this.saveError.set(null);
+    this.saveNotice.set(null);
     this.form.markAllAsTouched();
 
     if (this.form.invalid) {
@@ -558,11 +557,6 @@ export class QuestionForm {
       return;
     }
 
-    if (value.marks === null) {
-      this.saveError.set('Enter the marks for this question.');
-      return;
-    }
-
     const payload = {
       text: value.text.trim(),
       chapterId: value.chapterId,
@@ -575,10 +569,10 @@ export class QuestionForm {
       explanation: value.explanation.trim(),
       source: value.source.trim(),
       tags,
-      marks: Number(value.marks),
       status: value.status,
     };
 
+    this.savingMode.set(mode);
     this.saving.set(true);
 
     const request: Observable<QuestionRecord> =
@@ -588,11 +582,20 @@ export class QuestionForm {
 
     request
       .pipe(
-        finalize(() => this.saving.set(false)),
+        finalize(() => {
+          this.saving.set(false);
+          this.savingMode.set(null);
+        }),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: (question) => {
+          if (mode === 'new') {
+            this.resetForNextQuestion();
+            this.saveNotice.set('Question created. Add another when you are ready.');
+            return;
+          }
+
           void this.router.navigate(['/questions', question.id], {
             state: {
               notice: this.editing ? 'Question updated.' : 'Question created.',
@@ -601,6 +604,40 @@ export class QuestionForm {
         },
         error: (error: unknown) => this.saveError.set(this.messageOf(error)),
       });
+  }
+
+  protected saveAndNew(): void {
+    if (this.editing) {
+      return;
+    }
+
+    this.save('new');
+  }
+
+  protected dismissNotice(): void {
+    this.saveNotice.set(null);
+  }
+
+  private resetForNextQuestion(): void {
+    this.form.patchValue(
+      {
+        text: '',
+        answer: '',
+        explanation: '',
+        source: '',
+        tags: '',
+      },
+      { emitEvent: false },
+    );
+    this.options.clear();
+    this.activeOptionIndex = null;
+    this.ocrBusy.set(false);
+    this.ocrStatus.set('');
+    this.ocrError.set(null);
+    this.form.markAsPristine();
+    this.form.markAsUntouched();
+    this.refreshPreview();
+    queueMicrotask(() => this.questionInput()?.nativeElement.focus());
   }
 
   private load(): void {
@@ -754,7 +791,6 @@ export class QuestionForm {
       questionTypeId: questionType?.id ?? '',
       difficultyLevelId: difficulty?.id ?? '',
       bloomLevelId: this.bloomForDifficulty(difficulty?.id ?? ''),
-      marks: 1,
       status: 'active',
     });
   }
@@ -775,7 +811,6 @@ export class QuestionForm {
         explanation: question.explanation,
         source: question.source,
         tags: question.tags.join(', '),
-        marks: question.marks,
         status: question.status,
       },
       { emitEvent: false },
@@ -816,7 +851,6 @@ export class QuestionForm {
 
     this.preview.set({
       text: value.text,
-      marks: value.marks,
       options,
     });
   }
@@ -974,7 +1008,7 @@ export class QuestionForm {
   private readImage(file: File, target: InsertTarget): void {
     this.ocrBusy.set(true);
     this.ocrError.set(null);
-    this.ocrStatus.set('Reading image…');
+    this.ocrStatus.set('Preparing image…');
 
     void recognizeImage(
       file,
@@ -996,7 +1030,7 @@ export class QuestionForm {
       })
       .catch(() => {
         this.ocrError.set(
-          'The image could not be read. Try a clearer screenshot or type the text instead.',
+          'The image could not be read. Use a clear, high-resolution screenshot or type the text instead.',
         );
       })
       .finally(() => {

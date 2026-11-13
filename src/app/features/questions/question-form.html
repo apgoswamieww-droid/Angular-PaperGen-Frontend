@@ -40,19 +40,28 @@
         </p>
       }
 
+      @if (saveNotice(); as saveNotice) {
+        <p class="action-notice" role="status" data-testid="save-notice">
+          <app-icon name="check" />
+          <span class="notice-body">{{ saveNotice }}</span>
+          <button type="button" class="notice-dismiss" (click)="dismissNotice()">
+            <app-icon name="x" />
+            <span class="sr-only">Dismiss</span>
+          </button>
+        </p>
+      }
+
       <section class="card preview-card" data-testid="question-preview">
         <div class="section-head">
           <div>
             <h2>Student preview</h2>
             <p>See how the question and options will appear on the paper.</p>
           </div>
-          <span class="pill pill--neutral">{{ preview().marks ?? 0 }} marks</span>
         </div>
 
         <div class="paper-preview">
           <div class="paper-preview__meta">
             <span>Question 1</span>
-            <span>{{ preview().marks ?? 0 }} marks</span>
           </div>
 
           @if (preview().text.trim() !== '') {
@@ -86,7 +95,7 @@
         <div class="section-head">
           <div>
             <h2>Question</h2>
-            <p>Write the prompt and place it in the right part of the curriculum.</p>
+            <p>Write the prompt. Marks are assigned when you generate a paper.</p>
           </div>
         </div>
 
@@ -288,7 +297,7 @@
               </select>
             </label>
             <span class="ocr-controls__hint"
-              >Paste a screenshot here or into any option to convert typed text.</span
+              >Paste a clear, high-resolution screenshot here or into any option.</span
             >
           </div>
 
@@ -310,174 +319,13 @@
 
           <span class="field__hint">
             Use <code>$...$</code> for inline math and <code>$$...$$</code> for a separate equation.
-            Paste MathType/MathML equations directly, or paste a screenshot for OCR. Check converted
-            equations before saving.
+            Paste MathType/MathML equations directly, or paste a screenshot for OCR. Check the
+            converted text carefully, especially Gujarati and mixed-language questions.
           </span>
 
           @if (isFieldInvalid('text')) {
             <span class="field__error">Question text is required (up to 5,000 characters).</span>
           }
-        </div>
-
-        <div class="form-grid">
-          <label class="field">
-            <span class="field__label">Medium <span class="required">*</span></span>
-            <select
-              formControlName="mediumId"
-              data-testid="question-medium"
-              (change)="onMediumChange()"
-            >
-              <option value="">Select medium</option>
-              @for (medium of mediumOptions(); track medium.id) {
-                <option [value]="medium.id">{{ medium.name }}</option>
-              }
-            </select>
-            @if (isFieldInvalid('mediumId')) {
-              <span class="field__error">Choose a medium.</span>
-            }
-          </label>
-
-          <label class="field">
-            <span class="field__label">Standard <span class="required">*</span></span>
-            <select
-              formControlName="standardId"
-              data-testid="question-standard"
-              (change)="onStandardChange()"
-            >
-              <option value="">Select standard</option>
-              @for (standard of standardOptions(); track standard.id) {
-                <option [value]="standard.id">{{ standard.name }}</option>
-              }
-            </select>
-            @if (isFieldInvalid('standardId')) {
-              <span class="field__error">Choose a standard.</span>
-            }
-          </label>
-
-          <label class="field">
-            <span class="field__label">Subject <span class="required">*</span></span>
-            <select
-              formControlName="subjectId"
-              data-testid="question-subject"
-              (change)="onSubjectChange()"
-            >
-              <option value="">Select subject</option>
-              @for (subject of subjectOptions(); track subject.id) {
-                <option [value]="subject.id">{{ subject.name }}</option>
-              }
-            </select>
-            @if (isFieldInvalid('subjectId')) {
-              <span class="field__error">Choose a subject.</span>
-            }
-          </label>
-
-          <label class="field">
-            <span class="field__label">Chapter <span class="required">*</span></span>
-            <select
-              formControlName="chapterId"
-              data-testid="question-chapter"
-              (change)="onChapterChange()"
-            >
-              <option value="">Select chapter</option>
-              @for (chapter of chapterOptions(); track chapter.id) {
-                <option [value]="chapter.id">{{ chapter.name }}</option>
-              }
-            </select>
-            @if (isFieldInvalid('chapterId')) {
-              <span class="field__error">Choose a chapter.</span>
-            }
-          </label>
-
-          <label class="field">
-            <span class="field__label">Topic <span class="optional">(optional)</span></span>
-            <select
-              formControlName="topicId"
-              data-testid="question-topic"
-              [disabled]="selectedChapter() === '' || topicsLoading()"
-            >
-              <option value="">
-                {{ topicsLoading() ? 'Loading topics&hellip;' : 'No specific topic' }}
-              </option>
-              @for (topic of topicOptions(); track topic.id) {
-                <option [value]="topic.id">{{ topic.name }}</option>
-              }
-            </select>
-            @if (topicsError(); as topicsError) {
-              <span class="field__error">{{ topicsError }}</span>
-            }
-          </label>
-
-          <label class="field">
-            <span class="field__label">Question type <span class="required">*</span></span>
-            <select formControlName="questionTypeId" data-testid="question-type">
-              <option value="">Select type</option>
-              @for (type of questionTypeOptions(); track type.id) {
-                <option [value]="type.id">{{ type.name }}</option>
-              }
-            </select>
-            @if (isFieldInvalid('questionTypeId')) {
-              <span class="field__error">Choose a question type.</span>
-            }
-          </label>
-
-          <label class="field">
-            <span class="field__label">Difficulty <span class="required">*</span></span>
-            <select formControlName="difficultyLevelId" data-testid="question-difficulty">
-              <option value="">Select difficulty</option>
-              @for (level of difficultyOptions(); track level.id) {
-                <option [value]="level.id">{{ level.name }}</option>
-              }
-            </select>
-            @if (isFieldInvalid('difficultyLevelId')) {
-              <span class="field__error">Choose a difficulty level.</span>
-            }
-          </label>
-
-          <label class="field">
-            <span class="field__label">Bloom level <span class="optional">(optional)</span></span>
-            <select formControlName="bloomLevelId" data-testid="question-bloom">
-              <option value="">Not specified</option>
-              @for (level of bloomOptions(); track level.id) {
-                <option [value]="level.id">{{ level.name }}</option>
-              }
-            </select>
-            <span class="field__hint">Set automatically from difficulty; you can change it.</span>
-          </label>
-
-          <label class="field">
-            <span class="field__label">Marks <span class="required">*</span></span>
-            <input
-              type="number"
-              formControlName="marks"
-              data-testid="question-marks"
-              min="0.5"
-              max="100"
-              step="0.5"
-            />
-            @if (isFieldInvalid('marks')) {
-              <span class="field__error">Enter marks between 0.5 and 100.</span>
-            }
-          </label>
-
-          <fieldset class="field field--fieldset">
-            <legend class="field__label">Status</legend>
-            <div class="status-choice">
-              <label class="status-option">
-                <input type="radio" formControlName="status" value="active" />
-                <span>
-                  <span class="status-option__name">Active</span>
-                  <span class="status-option__hint">Available for papers</span>
-                </span>
-              </label>
-              <label class="status-option">
-                <input type="radio" formControlName="status" value="inactive" />
-                <span>
-                  <span class="status-option__name">Inactive</span>
-                  <span class="status-option__hint">Draft or retired</span>
-                </span>
-              </label>
-            </div>
-          </fieldset>
         </div>
       </section>
 
@@ -610,6 +458,161 @@
       <section class="card form-card">
         <div class="section-head">
           <div>
+            <h2>Classification</h2>
+            <p>Place the question in the curriculum and set its type, difficulty and status.</p>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <label class="field">
+            <span class="field__label">Medium <span class="required">*</span></span>
+            <select
+              formControlName="mediumId"
+              data-testid="question-medium"
+              (change)="onMediumChange()"
+            >
+              <option value="">Select medium</option>
+              @for (medium of mediumOptions(); track medium.id) {
+                <option [value]="medium.id">{{ medium.name }}</option>
+              }
+            </select>
+            @if (isFieldInvalid('mediumId')) {
+              <span class="field__error">Choose a medium.</span>
+            }
+          </label>
+
+          <label class="field">
+            <span class="field__label">Standard <span class="required">*</span></span>
+            <select
+              formControlName="standardId"
+              data-testid="question-standard"
+              (change)="onStandardChange()"
+            >
+              <option value="">Select standard</option>
+              @for (standard of standardOptions(); track standard.id) {
+                <option [value]="standard.id">{{ standard.name }}</option>
+              }
+            </select>
+            @if (isFieldInvalid('standardId')) {
+              <span class="field__error">Choose a standard.</span>
+            }
+          </label>
+
+          <label class="field">
+            <span class="field__label">Subject <span class="required">*</span></span>
+            <select
+              formControlName="subjectId"
+              data-testid="question-subject"
+              (change)="onSubjectChange()"
+            >
+              <option value="">Select subject</option>
+              @for (subject of subjectOptions(); track subject.id) {
+                <option [value]="subject.id">{{ subject.name }}</option>
+              }
+            </select>
+            @if (isFieldInvalid('subjectId')) {
+              <span class="field__error">Choose a subject.</span>
+            }
+          </label>
+
+          <label class="field">
+            <span class="field__label">Chapter <span class="required">*</span></span>
+            <select
+              formControlName="chapterId"
+              data-testid="question-chapter"
+              (change)="onChapterChange()"
+            >
+              <option value="">Select chapter</option>
+              @for (chapter of chapterOptions(); track chapter.id) {
+                <option [value]="chapter.id">{{ chapter.name }}</option>
+              }
+            </select>
+            @if (isFieldInvalid('chapterId')) {
+              <span class="field__error">Choose a chapter.</span>
+            }
+          </label>
+
+          <label class="field">
+            <span class="field__label">Topic <span class="optional">(optional)</span></span>
+            <select
+              formControlName="topicId"
+              data-testid="question-topic"
+              [disabled]="selectedChapter() === '' || topicsLoading()"
+            >
+              <option value="">
+                {{ topicsLoading() ? 'Loading topics&hellip;' : 'No specific topic' }}
+              </option>
+              @for (topic of topicOptions(); track topic.id) {
+                <option [value]="topic.id">{{ topic.name }}</option>
+              }
+            </select>
+            @if (topicsError(); as topicsError) {
+              <span class="field__error">{{ topicsError }}</span>
+            }
+          </label>
+
+          <label class="field">
+            <span class="field__label">Question type <span class="required">*</span></span>
+            <select formControlName="questionTypeId" data-testid="question-type">
+              <option value="">Select type</option>
+              @for (type of questionTypeOptions(); track type.id) {
+                <option [value]="type.id">{{ type.name }}</option>
+              }
+            </select>
+            @if (isFieldInvalid('questionTypeId')) {
+              <span class="field__error">Choose a question type.</span>
+            }
+          </label>
+
+          <label class="field">
+            <span class="field__label">Difficulty <span class="required">*</span></span>
+            <select formControlName="difficultyLevelId" data-testid="question-difficulty">
+              <option value="">Select difficulty</option>
+              @for (level of difficultyOptions(); track level.id) {
+                <option [value]="level.id">{{ level.name }}</option>
+              }
+            </select>
+            @if (isFieldInvalid('difficultyLevelId')) {
+              <span class="field__error">Choose a difficulty level.</span>
+            }
+          </label>
+
+          <label class="field">
+            <span class="field__label">Bloom level <span class="optional">(optional)</span></span>
+            <select formControlName="bloomLevelId" data-testid="question-bloom">
+              <option value="">Not specified</option>
+              @for (level of bloomOptions(); track level.id) {
+                <option [value]="level.id">{{ level.name }}</option>
+              }
+            </select>
+            <span class="field__hint">Set automatically from difficulty; you can change it.</span>
+          </label>
+
+          <fieldset class="field field--fieldset">
+            <legend class="field__label">Status</legend>
+            <div class="status-choice">
+              <label class="status-option">
+                <input type="radio" formControlName="status" value="active" />
+                <span>
+                  <span class="status-option__name">Active</span>
+                  <span class="status-option__hint">Available for papers</span>
+                </span>
+              </label>
+              <label class="status-option">
+                <input type="radio" formControlName="status" value="inactive" />
+                <span>
+                  <span class="status-option__name">Inactive</span>
+                  <span class="status-option__hint">Draft or retired</span>
+                </span>
+              </label>
+            </div>
+          </fieldset>
+        </div>
+      </section>
+
+      <section class="card form-card">
+        <div class="section-head">
+          <div>
             <h2>Answer &amp; references</h2>
             <p>Active questions need an answer key or a correct option.</p>
           </div>
@@ -671,9 +674,27 @@
 
       <footer class="form-actions">
         <a class="btn-ghost" routerLink="/questions">Cancel</a>
+        @if (!editing) {
+          <button
+            type="button"
+            class="btn-ghost"
+            [disabled]="saving()"
+            (click)="saveAndNew()"
+            data-testid="save-and-new"
+          >
+            <app-icon name="plus" />
+            {{ savingMode() === 'new' ? 'Saving&hellip;' : 'Save & new' }}
+          </button>
+        }
         <button type="submit" class="btn-primary" [disabled]="saving()" data-testid="save-question">
           <app-icon name="check" />
-          {{ saving() ? 'Saving&hellip;' : editing ? 'Save changes' : 'Create question' }}
+          {{
+            savingMode() === 'redirect'
+              ? 'Saving&hellip;'
+              : editing
+                ? 'Save changes'
+                : 'Create question'
+          }}
         </button>
       </footer>
     </form>

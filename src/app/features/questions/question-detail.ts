@@ -160,7 +160,7 @@ export class QuestionDetail {
       : `${question.chapterName} / ${question.topicName}`;
   }
 
-  protected dateLabel(value: string | null): string {
+  protected dateTimeLabel(value: string | null): string {
     if (value === null) {
       return 'Not available';
     }
@@ -169,10 +169,12 @@ export class QuestionDetail {
 
     return Number.isNaN(date.getTime())
       ? 'Not available'
-      : date.toLocaleDateString('en-GB', {
+      : date.toLocaleString('en-GB', {
           day: '2-digit',
           month: 'short',
           year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
         });
   }
 

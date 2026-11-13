@@ -8,7 +8,6 @@ import type { CreateQuestionRequest, QuestionRecord, QuestionsPage } from './que
 const QUESTION: QuestionRecord = {
   id: 'q1',
   text: 'What is 2 + 2?',
-  marks: 1,
   status: 'active',
   chapterId: 'ch1',
   chapterName: 'Number System',
@@ -40,7 +39,9 @@ const QUESTION: QuestionRecord = {
   source: '',
   tags: ['Numbers'],
   createdBy: 'u1',
+  createdByName: 'Asha Deshmukh',
   updatedBy: 'u1',
+  updatedByName: 'Asha Deshmukh',
 };
 
 const PAGE: QuestionsPage = {
@@ -82,7 +83,7 @@ describe('QuestionsService', () => {
         includeDeleted: true,
         page: 2,
         pageSize: 25,
-        sort: 'marks',
+        sort: 'text',
         dir: 'desc',
       }),
     );
@@ -104,7 +105,7 @@ describe('QuestionsService', () => {
     expect(request.request.params.get('includeDeleted')).toBe('true');
     expect(request.request.params.get('page')).toBe('2');
     expect(request.request.params.get('pageSize')).toBe('25');
-    expect(request.request.params.get('sort')).toBe('marks');
+    expect(request.request.params.get('sort')).toBe('text');
     expect(request.request.params.get('dir')).toBe('desc');
     request.flush(PAGE);
 
@@ -149,7 +150,6 @@ describe('QuestionsService', () => {
       explanation: '',
       source: '',
       tags: ['Numbers'],
-      marks: 1,
       status: 'active',
     };
     const result = firstValueFrom(service.create(payload));
@@ -164,15 +164,15 @@ describe('QuestionsService', () => {
   });
 
   it('updates a question', async () => {
-    const result = firstValueFrom(service.update('q1', { marks: 2 }));
+    const result = firstValueFrom(service.update('q1', { text: 'Updated question' }));
 
     const request = httpMock.expectOne('/api/questions/q1');
 
     expect(request.request.method).toBe('PATCH');
-    expect(request.request.body).toEqual({ marks: 2 });
-    request.flush({ ...QUESTION, marks: 2 });
+    expect(request.request.body).toEqual({ text: 'Updated question' });
+    request.flush({ ...QUESTION, text: 'Updated question' });
 
-    await expect(result).resolves.toEqual({ ...QUESTION, marks: 2 });
+    await expect(result).resolves.toEqual({ ...QUESTION, text: 'Updated question' });
   });
 
   it('deletes and restores a question', async () => {

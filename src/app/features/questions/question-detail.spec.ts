@@ -10,7 +10,6 @@ import { QuestionDetail } from './question-detail';
 const QUESTION: QuestionRecord = {
   id: 'q1',
   text: 'What is 2 + 2?',
-  marks: 1,
   status: 'active',
   chapterId: 'ch1',
   chapterName: 'Number System',
@@ -42,7 +41,9 @@ const QUESTION: QuestionRecord = {
   source: 'Number workbook',
   tags: ['Numbers'],
   createdBy: 'u1',
-  updatedBy: 'u1',
+  createdByName: 'Asha Deshmukh',
+  updatedBy: 'u2',
+  updatedByName: 'Chetan Joshi',
 };
 
 describe('QuestionDetail', () => {
@@ -121,7 +122,56 @@ describe('QuestionDetail', () => {
     expect(element().textContent).toContain('Standard 1');
     expect(element().textContent).toContain('Two plus two equals four.');
     expect(element().textContent).toContain('1 correct');
+    expect(element().textContent).toContain('Asha Deshmukh');
     expect(element().querySelector('[data-testid="edit-question"]')).not.toBeNull();
+  });
+
+  it('places options directly after the question and audit details at the bottom', () => {
+    signIn();
+    createDetail();
+    flushQuestion();
+
+    const headings = Array.from(element().querySelectorAll('.detail-card h2')).map((heading) =>
+      heading.textContent?.trim(),
+    );
+
+    expect(headings).toEqual([
+      'Options',
+      'Classification',
+      'Record',
+      'Answer & explanation',
+      'Audit trail',
+    ]);
+
+    const correctOption = element().querySelector('.option-item.is-correct');
+
+    expect(correctOption?.textContent).toContain('4');
+    expect(correctOption?.textContent).toContain('Correct answer');
+
+    const audit = element().querySelector('[data-testid="question-audit"]');
+    const created = new Date(QUESTION.createdAt).toLocaleString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    const updated = new Date(QUESTION.updatedAt).toLocaleString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    expect(audit?.textContent).toContain('Created by');
+    expect(audit?.textContent).toContain('Asha Deshmukh');
+    expect(audit?.textContent).toContain('Created at');
+    expect(audit?.textContent).toContain(created);
+    expect(audit?.textContent).toContain('Updated by');
+    expect(audit?.textContent).toContain('Chetan Joshi');
+    expect(audit?.textContent).toContain('Updated at');
+    expect(audit?.textContent).toContain(updated);
   });
 
   it('hides management actions for read-only roles', () => {

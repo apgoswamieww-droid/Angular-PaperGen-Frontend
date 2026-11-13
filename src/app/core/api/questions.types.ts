@@ -1,5 +1,5 @@
 export type QuestionStatus = 'active' | 'inactive';
-export type QuestionSortField = 'text' | 'marks' | 'createdAt' | 'updatedAt';
+export type QuestionSortField = 'text' | 'createdAt' | 'updatedAt';
 export type QuestionSortDirection = 'asc' | 'desc';
 
 export interface QuestionOption {
@@ -11,7 +11,6 @@ export interface QuestionOption {
 export interface QuestionListItem {
   id: string;
   text: string;
-  marks: number;
   status: QuestionStatus;
   chapterId: string;
   chapterName: string;
@@ -43,7 +42,9 @@ export interface QuestionRecord extends QuestionListItem {
   source: string;
   tags: string[];
   createdBy: string | null;
+  createdByName: string | null;
   updatedBy: string | null;
+  updatedByName: string | null;
 }
 
 export interface QuestionsSummary {
@@ -97,7 +98,6 @@ export interface CreateQuestionRequest {
   explanation?: string;
   source?: string;
   tags?: string[];
-  marks: number;
   status?: QuestionStatus;
 }
 
